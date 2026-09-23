@@ -33,6 +33,7 @@ else
 builder.Services.AddScoped<ICacheService, CacheService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IWorkerService, WorkerService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]!;

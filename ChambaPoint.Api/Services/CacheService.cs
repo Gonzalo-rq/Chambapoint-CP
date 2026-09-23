@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ChambaPoint.Api.Models;
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -14,6 +15,11 @@ public interface ICacheService
 
 public class CacheService : ICacheService
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        ReferenceHandler = ReferenceHandler.Preserve
+    };
+
     private readonly IDistributedCache _cache;
     private readonly ILogger<CacheService> _logger;
     private readonly string _backend;
@@ -36,7 +42,7 @@ public class CacheService : ICacheService
 
         try
         {
-            return JsonSerializer.Deserialize<T>(raw);
+            return JsonSerializer.Deserialize<T>(raw, SerializerOptions);
         }
         catch (JsonException ex)
         {
@@ -57,7 +63,7 @@ public class CacheService : ICacheService
             options.SetSlidingExpiration(TimeSpan.FromMinutes(15));
         }
 
-        await _cache.SetStringAsync(key, JsonSerializer.Serialize(value), options, ct);
+        await _cache.SetStringAsync(key, JsonSerializer.Serialize(value, SerializerOptions), options, ct);
     }
 
     public async Task RemoveAsync(string key, CancellationToken ct = default)
