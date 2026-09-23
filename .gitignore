@@ -1,0 +1,24 @@
+# .NET build output
+bin/
+obj/
+Debug/
+Release/
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+# Local secrets - credentials del equipo (Redis, CloudAMQP, PieSocket)
+appsettings.Development.json
+
+# Environment / IDE
+.env
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+.DS_Store
