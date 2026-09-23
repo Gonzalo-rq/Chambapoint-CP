@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using ChambaPoint.Api.Hubs;
 using ChambaPoint.Api.Models;
 using ChambaPoint.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace ChambaPoint.Api.Controllers;
 
@@ -12,11 +14,15 @@ public class ReviewsController : ControllerBase
 {
     private readonly IReviewService _reviewService;
     private readonly ICacheService _cache;
+    private readonly IRequestNotifier _notifier;
+    private readonly IHubContext<NotificationsHub> _hub;
 
-    public ReviewsController(IReviewService reviewService, ICacheService cache)
+    public ReviewsController(IReviewService reviewService, ICacheService cache, IRequestNotifier notifier, IHubContext<NotificationsHub> hub)
     {
         _reviewService = reviewService;
         _cache = cache;
+        _notifier = notifier;
+        _hub = hub;
     }
 
     [Authorize(Roles = Roles.Customer)]
@@ -43,6 +49,25 @@ public class ReviewsController : ControllerBase
         }
 
         await _cache.RemoveAsync("worker:" + workerId, ct);
+
+        await _notifier.PublishAsync("review.created", new
+        {
+            reviewId = review.Id,
+            workerId,
+            customerId = userId.Value,
+            rating = input.Rating
+        }, ct);
+
+        var worker = await _reviewService.GetWorkerByWorkerIdAsync(workerId, ct);
+        if (worker?.UserId is int workerUserId)
+        {
+            await _hub.Clients.Group($"user:{workerUserId}").SendAsync("newReview", new
+            {
+                reviewId = review.Id,
+                rating = input.Rating,
+                author = User.FindFirstValue("name") ?? User.Identity?.Name
+            }, ct);
+        }
 
         return Created($"/api/workers/{workerId}/reviews/{review.Id}", new
         {

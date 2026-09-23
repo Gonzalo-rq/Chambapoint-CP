@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: chambapoint-api
+    runtime: dotnet
+    plan: free
+    rootDir: ChambaPoint.Api
+    buildCommand: dotnet build -c Release
+    startCommand: dotnet run -c Release --urls http://0.0.0.0:$PORT
+    healthCheckPath: /openapi/v1.json
+    envVars:
+      - key: ConnectionStrings__DefaultConnection
+        value: Data Source=chambapoint.db
+      - key: ConnectionStrings__Redis
+        sync: false
+      - key: RabbitMQ__Uri
+        sync: false
+      - key: Jwt__Key
+        generateValue: true
+      - key: Jwt__Issuer
+        value: ChambaPoint
+      - key: Jwt__Audience
+        value: ChambaPointClients
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+    disk:
+      name: chambapoint-data
+      mountPath: /var/data
+      sizeGB: 1

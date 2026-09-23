@@ -8,6 +8,7 @@ public interface IReviewService
 {
     Task<Review?> CreateAsync(int workerId, int customerId, ReviewInput input, CancellationToken ct = default);
     Task<(List<Review> Items, int Total)> ListByWorkerAsync(int workerId, int page, int pageSize, CancellationToken ct = default);
+    Task<Worker?> GetWorkerByWorkerIdAsync(int workerId, CancellationToken ct = default);
 }
 
 public record ReviewInput(int Rating, string Text, List<string>? Photos);
@@ -57,5 +58,10 @@ public class ReviewService : IReviewService
             .ToListAsync(ct);
 
         return (items, total);
+    }
+
+    public Task<Worker?> GetWorkerByWorkerIdAsync(int workerId, CancellationToken ct = default)
+    {
+        return _db.Workers.FirstOrDefaultAsync(w => w.Id == workerId, ct);
     }
 }
