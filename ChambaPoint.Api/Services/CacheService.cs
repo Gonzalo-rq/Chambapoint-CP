@@ -29,7 +29,7 @@ public class CacheService : ICacheService
         _cache = cache;
         _logger = logger;
 
-        var redisConnection = config.GetValue<string>("Redis:ConnectionString");
+        var redisConnection = config.GetConnectionString("Redis");
         _backend = string.IsNullOrWhiteSpace(redisConnection) ? "InMemory" : "Redis";
     }
 
@@ -37,7 +37,17 @@ public class CacheService : ICacheService
 
     public async Task<T?> GetAsync<T>(string key, CancellationToken ct = default) where T : class
     {
-        var raw = await _cache.GetStringAsync(key, ct);
+        string? raw;
+        try
+        {
+            raw = await _cache.GetStringAsync(key, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Cache get fallo para {Key}", key);
+            return null;
+        }
+
         if (raw is null) return null;
 
         try
@@ -63,12 +73,26 @@ public class CacheService : ICacheService
             options.SetSlidingExpiration(TimeSpan.FromMinutes(15));
         }
 
-        await _cache.SetStringAsync(key, JsonSerializer.Serialize(value, SerializerOptions), options, ct);
+        try
+        {
+            await _cache.SetStringAsync(key, JsonSerializer.Serialize(value, SerializerOptions), options, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Cache set fallo para {Key}", key);
+        }
     }
 
     public async Task RemoveAsync(string key, CancellationToken ct = default)
     {
-        await _cache.RemoveAsync(key, ct);
+        try
+        {
+            await _cache.RemoveAsync(key, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Cache remove fallo para {Key}", key);
+        }
     }
 
     public Task<bool> PingAsync(CancellationToken ct = default)
