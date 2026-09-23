@@ -1,0 +1,6 @@
+@ChambaPoint.Api_HostAddress = http://localhost:5020
+
+GET {{ChambaPoint.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
