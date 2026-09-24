@@ -7,30 +7,51 @@
   <title>Dashboard — ChambaPoint</title>
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/screens/dashboard.css" />
 </head>
 <body>
   <div class="app-shell">
     <header class="app-header">
       <a class="brand" href="dashboard.html">ChambaPoint</a>
       <span class="spacer"></span>
-      <span class="avatar" id="userAvatar" title="Sesión activa"></span>
+      <button type="button" class="btn btn-ghost btn-sm" id="logoutBtn">Salir</button>
+      <span id="userAvatar" class="avatar" title="Sesión activa"></span>
     </header>
-    <main class="page">
-      <div class="empty-state">
-        <h3>Dashboard del Trabajador</h3>
-        <p>Pantalla disponible en la rama <strong>feat/ui-chat-dashboard</strong>.</p>
-        <p style="margin-top: 12px"><a class="btn btn-outline" href="index.html">Volver al inicio</a></p>
-      </div>
+
+    <main class="page" id="dashboardPage">
+      <section class="dash-hero">
+        <div class="dash-hero-text">
+          <p class="dash-hello" id="helloName">Hola</p>
+          <h1 id="dashTitle">Resumen de chambas</h1>
+        </div>
+        <div id="heroAvatar" class="avatar avatar-lg"></div>
+      </section>
+
+      <section class="earnings-card" aria-label="Ingresos de la semana">
+        <div class="earnings-top">
+          <span class="earnings-label">Ingresos semana</span>
+          <span class="earnings-period text-muted" id="earnPeriod"></span>
+        </div>
+        <p class="earnings-total" id="earnTotal">S/ 0.00</p>
+        <div class="week-chart" id="weekChart" role="img" aria-label="Gráfico Lun a Dom"></div>
+      </section>
+
+      <section class="counters" id="counters" aria-label="Contadores"></section>
+
+      <section>
+        <div class="list-section-title">Citas pendientes</div>
+        <div id="pendingAppts"></div>
+      </section>
+
+      <section>
+        <div class="list-section-title">Actividad reciente</div>
+        <div id="recentActivity"></div>
+      </section>
     </main>
   </div>
-  <script type="module">
-    import { requireAuth } from "./js/auth.js";
-    const user = requireAuth(["Worker"]);
-    if (user) {
-      const el = document.getElementById("userAvatar");
-      el.textContent = (user.name || "?").charAt(0).toUpperCase();
-      el.title = user.name;
-    }
-  </script>
+
+  <div id="modalRoot"></div>
+
+  <script type="module" src="js/screens/dashboard.js"></script>
 </body>
 </html>
