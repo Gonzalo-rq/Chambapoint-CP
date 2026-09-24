@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Request> Requests => Set<Request>();
     public DbSet<Message> Messages => Set<Message>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -76,6 +77,29 @@ public class AppDbContext : DbContext
 
             e.HasIndex(m => new { m.SenderId, m.ReceiverId });
             e.HasIndex(m => m.SentAt);
+        });
+
+        modelBuilder.Entity<Appointment>(e =>
+        {
+            e.HasOne(a => a.Request)
+             .WithMany()
+             .HasForeignKey(a => a.RequestId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(a => a.Worker)
+             .WithMany()
+             .HasForeignKey(a => a.WorkerId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(a => a.Customer)
+             .WithMany()
+             .HasForeignKey(a => a.CustomerId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(a => a.WorkerId);
+            e.HasIndex(a => a.CustomerId);
+            e.HasIndex(a => a.DateTime);
+            e.HasIndex(a => a.Status);
         });
     }
 }

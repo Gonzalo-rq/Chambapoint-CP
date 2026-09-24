@@ -37,6 +37,7 @@ builder.Services.AddScoped<IWorkerService, WorkerService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IRequestService, RequestService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddSingleton<IRequestNotifier, RabbitMqRequestNotifier>();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
