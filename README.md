@@ -54,6 +54,12 @@ Tu conexión con oficios locales. Marketplace de servicios (electricistas, gasfi
 | PATCH | /api/appointments/{id} | Bearer | {status: "Aceptada"\|"Rechazada"\|"Completada"} | 200, 400, 401, 403, 404 |
 | PATCH | /api/appointments/{id}/status | Bearer | {status: "Aceptada"\|"Rechazada"\|"Completada"} | 200, 400, 401, 403, 404 |
 
+### Dashboard Trabajador
+| Metodo | Ruta | Auth | Body/Query | Respuestas |
+|--------|------|------|------------|------------|
+| GET | /api/workers/dashboard | Bearer Worker | - | 200, 401, 403 |
+| GET | /api/dashboard/worker | Bearer Worker | - | 200, 401, 403 |
+
 ### WebSocket / Tiempo real
 | Ruta | Tipo | Descripcion |
 |------|------|-------------|

@@ -81,5 +81,9 @@ public class Request
     [Required, MaxLength(50)]
     public string Status { get; set; } = RequestStatuses.Pendiente;
 
+    public decimal? Price { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime? CompletedAt { get; set; }
 }
