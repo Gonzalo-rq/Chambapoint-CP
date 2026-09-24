@@ -20,14 +20,50 @@ let worker = null;
 let activeTab = "about";
 let selectedRating = 5;
 
+function normalizeWorker(raw) {
+  const toList = (v) => (Array.isArray(v) ? v : Array.isArray(v?.$values) ? v.$values : []);
+  const reviews = toList(raw.reviews).map((r) => ({
+    id: r.id ?? r.Id,
+    rating: Number(r.rating ?? r.Rating) || 0,
+    text: r.text ?? r.Text ?? "",
+    photos: toList(r.photos ?? r.Photos),
+    createdAt: r.createdAt ?? r.CreatedAt ?? null,
+    author: r.author ?? r.Author ?? null,
+  }));
+  return {
+    ...raw,
+    id: raw.id ?? raw.Id,
+    userId: raw.userId ?? raw.UserId,
+    profession: raw.profession ?? raw.Profession ?? "",
+    experienceYears: raw.experienceYears ?? raw.ExperienceYears ?? 0,
+    distanceKm: raw.distanceKm ?? raw.DistanceKm ?? null,
+    jobsCount: raw.jobsCount ?? raw.JobsCount ?? 0,
+    about: raw.about ?? raw.About ?? "",
+    certifications: toList(raw.certifications ?? raw.Certifications),
+    gallery: toList(raw.gallery ?? raw.Gallery),
+    reviews,
+  };
+}
+
+async function resolveUserId() {
+  if (worker.userId != null) return;
+  try {
+    const data = await api("/api/requests?pageSize=50");
+    const hit = (data.items || []).find((r) => r.workerId === worker.id && r.worker?.userId != null);
+    if (hit?.worker?.userId != null) worker.userId = hit.worker.userId;
+  } catch {
+  }
+}
+
 async function load() {
   if (!workerId) {
     root.innerHTML = `<div class="empty-state"><h3>ID inválido</h3><a href="explore.html">Volver a explorar</a></div>`;
     return;
   }
   try {
-    worker = await api(`/api/workers/${workerId}`, { auth: false });
+    worker = normalizeWorker(await api(`/api/workers/${workerId}`, { auth: false }));
     headerName.textContent = worker.name || "Perfil";
+    await resolveUserId();
     render();
   } catch (err) {
     root.innerHTML = `<div class="empty-state"><h3>No encontramos al técnico</h3><p>${escapeHtml(err.message)}</p><p style="margin-top:12px"><a class="btn btn-outline" href="explore.html">Volver</a></p></div>`;
@@ -56,8 +92,16 @@ function render() {
         ${certs.map((c) => `<span class="badge badge-neutral">${escapeHtml(c)}</span>`).join("")}
       </div>
       <div class="profile-actions">
-        <button type="button" class="btn btn-primary btn-block" id="requestBtn">Solicitar Servicio</button>
-        <button type="button" class="btn btn-outline btn-block" id="messageBtn">Enviar Mensaje</button>
+        ${
+          user.role === "Customer"
+            ? `<button type="button" class="btn btn-primary btn-block" id="requestBtn">Solicitar Servicio</button>`
+            : ""
+        }
+        ${
+          worker.userId
+            ? `<button type="button" class="btn btn-outline btn-block" id="messageBtn">Enviar Mensaje</button>`
+            : ""
+        }
       </div>
     </section>
 
@@ -81,7 +125,7 @@ function render() {
   document.getElementById("requestBtn")?.addEventListener("click", openRequestModal);
   document.getElementById("messageBtn")?.addEventListener("click", () => {
     if (worker.userId) {
-      window.location.href = `chat.html?with=${worker.userId}&workerId=${worker.id}`;
+      window.location.href = `chat.html?with=${worker.userId}`;
     } else {
       toast("Este perfil no expone usuario de chat.", "warning");
     }
@@ -180,11 +224,12 @@ function renderTab() {
 }
 
 function reviewItem(r) {
+  const rating = Number(r.rating) || 0;
   return `
     <article class="review-item">
       <div class="review-head">
         <strong>${escapeHtml(r.author || "Cliente")}</strong>
-        <span class="review-stars">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>
+        <span class="review-stars">${"★".repeat(rating)}${"☆".repeat(Math.max(0, 5 - rating))}</span>
       </div>
       <p>${escapeHtml(r.text)}</p>
       ${
@@ -217,7 +262,7 @@ async function submitReview(e) {
       body: { rating: selectedRating, text, photos },
     });
     toast("Reseña publicada", "success");
-    worker = await api(`/api/workers/${worker.id}`, { auth: false });
+    worker = normalizeWorker(await api(`/api/workers/${worker.id}`, { auth: false }));
     render();
   } catch (err) {
     toast(err.message, "error");

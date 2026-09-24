@@ -55,6 +55,6 @@ export function showSkeleton(listEl, count = 3) {
 export function fieldError(input, message) {
   if (!input) return;
   input.classList.toggle("is-invalid", Boolean(message));
-  const err = input.parentElement?.querySelector(".field-error");
+  const err = input.closest(".field")?.querySelector(".field-error");
   if (err) err.textContent = message || "";
 }

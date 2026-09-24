@@ -13,10 +13,11 @@ const modalRoot = document.getElementById("modalRoot");
 const tabs = document.querySelectorAll(".tab-btn");
 
 document.getElementById("userAvatar").outerHTML = avatarHtml(user);
-document.body.insertAdjacentHTML("beforeend", bottomNav("requests"));
+document.body.insertAdjacentHTML("beforeend", bottomNav("requests", user.role));
 
 let statusFilter = "activas";
 let requestsCache = [];
+let loadSeq = 0;
 
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -32,13 +33,17 @@ tabs.forEach((tab) => {
 });
 
 async function load() {
+  const seq = ++loadSeq;
+  const filter = statusFilter;
   showSkeleton(listEl, 3);
   try {
-    const data = await api(`/api/requests?status=${statusFilter}&pageSize=20`);
+    const data = await api(`/api/requests?status=${filter}&pageSize=20`);
+    if (seq !== loadSeq) return;
     requestsCache = data.items || [];
     renderRequests(requestsCache);
-    await loadAppointments();
+    await loadAppointments(seq, filter);
   } catch (err) {
+    if (seq !== loadSeq) return;
     listEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     toast(err.message, "error");
   }
@@ -47,7 +52,7 @@ async function load() {
 function renderRequests(items) {
   if (!items.length) {
     listEl.innerHTML = `<div class="empty-state"><h3>Sin solicitudes</h3><p>${
-      statusFilter === "activas" ? "Explorar y solicita un servicio." : "Aún no hay historial."
+      statusFilter === "activas" ? "Explora y solicita un servicio." : "Aún no hay historial."
     }</p><p style="margin-top:12px"><a class="btn btn-primary" href="explore.html">Explorar</a></p></div>`;
     return;
   }
@@ -98,7 +103,7 @@ function renderRequests(items) {
           }
           ${
             user.role === "Customer" && r.worker?.userId
-              ? `<button type="button" class="btn btn-ghost btn-sm" data-chat="${r.worker.userId}" data-worker="${r.worker.id}">Chat</button>`
+              ? `<button type="button" class="btn btn-ghost btn-sm" data-chat="${r.worker.userId}" data-request="${r.id}">Chat</button>`
               : ""
           }
         </div>
@@ -114,7 +119,7 @@ function renderRequests(items) {
   });
   listEl.querySelectorAll("[data-chat]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      window.location.href = `chat.html?with=${btn.dataset.chat}&workerId=${btn.dataset.worker || ""}`;
+      window.location.href = `chat.html?with=${btn.dataset.chat}&requestId=${btn.dataset.request || ""}`;
     });
   });
 }
@@ -132,11 +137,12 @@ async function updateRequestStatus(id, status, btn) {
   }
 }
 
-async function loadAppointments() {
+async function loadAppointments(seq = loadSeq, filter = statusFilter) {
   try {
     const data = await api(`/api/appointments?pageSize=20`);
+    if (seq !== loadSeq) return;
     const items = (data.items || []).filter((a) => {
-      if (statusFilter === "activas") return a.status === "Nueva" || a.status === "Aceptada";
+      if (filter === "activas") return a.status === "Nueva" || a.status === "Aceptada";
       return a.status === "Completada" || a.status === "Rechazada";
     });
     if (!items.length) {
@@ -150,6 +156,7 @@ async function loadAppointments() {
       btn.addEventListener("click", () => updateAppointment(btn.dataset.apptId, btn.dataset.apptAction, btn));
     });
   } catch {
+    if (seq !== loadSeq) return;
     apptTitle.hidden = true;
     apptListEl.innerHTML = "";
   }
@@ -191,7 +198,8 @@ function openScheduleModal(requestId) {
   const req = requestsCache.find((r) => String(r.id) === String(requestId));
   const defaultWorkerId = req?.workerId || null;
   const minDate = new Date(Date.now() + 60 * 60 * 1000);
-  const minStr = minDate.toISOString().slice(0, 16);
+  const pad = (n) => String(n).padStart(2, "0");
+  const minStr = `${minDate.getFullYear()}-${pad(minDate.getMonth() + 1)}-${pad(minDate.getDate())}T${pad(minDate.getHours())}:${pad(minDate.getMinutes())}`;
 
   modalRoot.innerHTML = `
     <div class="modal-backdrop" id="apptBackdrop">
