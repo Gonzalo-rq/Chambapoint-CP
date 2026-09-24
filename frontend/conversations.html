@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1B7A3D" />
+  <title>Mensajes — ChambaPoint</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/screens/chat.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="explore.html">ChambaPoint</a>
+      <span class="spacer"></span>
+      <span id="userAvatar" class="avatar" title="Sesión"></span>
+    </header>
+
+    <main class="page">
+      <h1 style="font-size:22px;font-weight:800;margin-bottom:6px">Mensajes</h1>
+      <p class="text-muted" style="font-size:13px;margin-bottom:14px">Conversaciones con clientes y técnicos.</p>
+
+      <div class="conv-search input-icon-wrap">
+        <input id="convSearch" type="search" placeholder="Buscar conversación..." aria-label="Buscar conversación" />
+      </div>
+
+      <div id="convList" class="conv-list" aria-live="polite"></div>
+      <div id="convEmpty" class="empty-state" hidden>
+        <h3>Sin conversaciones</h3>
+        <p>Acuerda un servicio desde Solicitudes o el perfil del técnico.</p>
+        <p style="margin-top:12px"><a class="btn btn-primary" href="explore.html">Explorar</a></p>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/screens/conversations.js"></script>
+</body>
+</html>
