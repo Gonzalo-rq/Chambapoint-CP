@@ -29,10 +29,19 @@ Tu conexión con oficios locales. Marketplace de servicios (electricistas, gasfi
 | POST | /api/workers/{id}/reviews | Bearer Customer | {rating (1-5), text, photos[]} | 201, 400, 401, 403, 404 |
 | GET | /api/workers/{id}/reviews | Publico | ?page=1&pageSize=10 | 200 |
 
+### Solicitudes (Requests)
+| Metodo | Ruta | Auth | Body/Query | Respuestas |
+|--------|------|------|------------|------------|
+| POST | /api/requests | Bearer Customer | {workerId?, category, description, photos[], urgency, scheduledAt?} | 201, 400, 401 |
+| GET | /api/requests | Bearer | ?status=activas\|historial&page=1&pageSize=10 | 200, 401 |
+| GET | /api/requests/{id} | Bearer | - | 200, 401, 403, 404 |
+| PATCH | /api/requests/{id} | Bearer Worker | {status: "Aceptada"\|"Rechazada"\|"Completada"} | 200, 400, 401, 403, 404 |
+| PATCH | /api/requests/{id}/status | Bearer Worker | {status: "Aceptada"\|"Rechazada"\|"Completada"} | 200, 400, 401, 403, 404 |
+
 ### WebSocket / Tiempo real
 | Ruta | Tipo | Descripcion |
 |------|------|-------------|
-| /hubs/notifications | SignalR | Notificaciones en vivo. Eventos: `newReview`. Unirse al grupo `user:{userId}`. |
+| /hubs/notifications | SignalR | Notificaciones en vivo. Eventos: `newReview`, `newRequest`, `requestStatusChanged`. Unirse al grupo `user:{userId}`. |
 
 ## Ejemplos rapidos (PowerShell)
 

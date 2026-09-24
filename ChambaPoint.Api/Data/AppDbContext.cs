@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Worker> Workers => Set<Worker>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<Request> Requests => Set<Request>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +41,19 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(r => r.CustomerId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Request>(e =>
+        {
+            e.HasOne(r => r.Customer)
+             .WithMany()
+             .HasForeignKey(r => r.CustomerId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(r => r.Worker)
+             .WithMany()
+             .HasForeignKey(r => r.WorkerId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
