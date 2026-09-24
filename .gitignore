@@ -9,6 +9,9 @@ Release/
 *.db-shm
 *.db-wal
 
+# Frontend copiado al build de la API (sale de frontend/)
+ChambaPoint.Api/wwwroot/
+
 # Local secrets - credentials del equipo (Redis, CloudAMQP, PieSocket)
 appsettings.Development.json
 

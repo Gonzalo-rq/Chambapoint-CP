@@ -18,4 +18,13 @@
     <PackageReference Include="RabbitMQ.Client" Version="7.2.2" />
   </ItemGroup>
 
+  <Target Name="CopyFrontendToWwwroot" BeforeTargets="BeforeBuild">
+    <ItemGroup>
+      <FrontendFiles Include="$(MSBuildThisFileDirectory)..\frontend\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FrontendFiles)"
+          DestinationFiles="@(FrontendFiles->'$(MSBuildThisFileDirectory)wwwroot\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>
