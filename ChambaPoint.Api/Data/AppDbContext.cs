@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<Worker> Workers => Set<Worker>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Request> Requests => Set<Request>();
+    public DbSet<Message> Messages => Set<Message>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,6 +55,27 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(r => r.WorkerId)
              .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Message>(e =>
+        {
+            e.HasOne(m => m.Sender)
+             .WithMany()
+             .HasForeignKey(m => m.SenderId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(m => m.Receiver)
+             .WithMany()
+             .HasForeignKey(m => m.ReceiverId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(m => m.Request)
+             .WithMany()
+             .HasForeignKey(m => m.RequestId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasIndex(m => new { m.SenderId, m.ReceiverId });
+            e.HasIndex(m => m.SentAt);
         });
     }
 }

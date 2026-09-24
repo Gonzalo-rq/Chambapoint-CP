@@ -38,10 +38,17 @@ Tu conexión con oficios locales. Marketplace de servicios (electricistas, gasfi
 | PATCH | /api/requests/{id} | Bearer Worker | {status: "Aceptada"\|"Rechazada"\|"Completada"} | 200, 400, 401, 403, 404 |
 | PATCH | /api/requests/{id}/status | Bearer Worker | {status: "Aceptada"\|"Rechazada"\|"Completada"} | 200, 400, 401, 403, 404 |
 
+### Mensajes (Chat 1 a 1)
+| Metodo | Ruta | Auth | Body/Query | Respuestas |
+|--------|------|------|------------|------------|
+| POST | /api/messages | Bearer | {receiverId, requestId?, text} | 201, 400, 401, 404 |
+| GET | /api/messages | Bearer | ?withUserId={id}&page=1&pageSize=50 | 200, 401 |
+| POST | /api/messages/read | Bearer | {withUserId} | 200, 401 |
+
 ### WebSocket / Tiempo real
 | Ruta | Tipo | Descripcion |
 |------|------|-------------|
-| /hubs/notifications | SignalR | Notificaciones en vivo. Eventos: `newReview`, `newRequest`, `requestStatusChanged`. Unirse al grupo `user:{userId}`. |
+| /hubs/notifications | SignalR | Notificaciones en vivo. Eventos: `newReview`, `newRequest`, `requestStatusChanged`, `newMessage`, `messagesRead`. Unirse al grupo `user:{userId}`. |
 
 ## Ejemplos rapidos (PowerShell)
 
