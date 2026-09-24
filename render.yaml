@@ -6,10 +6,10 @@ services:
     rootDir: ChambaPoint.Api
     buildCommand: dotnet build -c Release
     startCommand: dotnet run -c Release --urls http://0.0.0.0:$PORT
-    healthCheckPath: /openapi/v1.json
+    healthCheckPath: /health
     envVars:
       - key: ConnectionStrings__DefaultConnection
-        value: Data Source=chambapoint.db
+        value: Data Source=/var/data/chambapoint.db
       - key: ConnectionStrings__Redis
         sync: false
       - key: RabbitMQ__Uri
