@@ -45,10 +45,25 @@ Tu conexión con oficios locales. Marketplace de servicios (electricistas, gasfi
 | GET | /api/messages | Bearer | ?withUserId={id}&page=1&pageSize=50 | 200, 401 |
 | POST | /api/messages/read | Bearer | {withUserId} | 200, 401 |
 
+### Citas (Appointments)
+| Metodo | Ruta | Auth | Body/Query | Respuestas |
+|--------|------|------|------------|------------|
+| POST | /api/appointments | Bearer | {requestId, workerId?, customerId?, dateTime, description} | 201, 400, 401, 403, 404 |
+| GET | /api/appointments | Bearer | ?status=&requestId=&page=1&pageSize=20 | 200, 401 |
+| GET | /api/appointments/{id} | Bearer | - | 200, 401, 403, 404 |
+| PATCH | /api/appointments/{id} | Bearer | {status: "Aceptada"\|"Rechazada"\|"Completada"} | 200, 400, 401, 403, 404 |
+| PATCH | /api/appointments/{id}/status | Bearer | {status: "Aceptada"\|"Rechazada"\|"Completada"} | 200, 400, 401, 403, 404 |
+
+### Dashboard Trabajador
+| Metodo | Ruta | Auth | Body/Query | Respuestas |
+|--------|------|------|------------|------------|
+| GET | /api/workers/dashboard | Bearer Worker | - | 200, 401, 403 |
+| GET | /api/dashboard/worker | Bearer Worker | - | 200, 401, 403 |
+
 ### WebSocket / Tiempo real
 | Ruta | Tipo | Descripcion |
 |------|------|-------------|
-| /hubs/notifications | SignalR | Notificaciones en vivo. Eventos: `newReview`, `newRequest`, `requestStatusChanged`, `newMessage`, `messagesRead`. Unirse al grupo `user:{userId}`. |
+| /hubs/notifications | SignalR | Notificaciones en vivo. Eventos: `newReview`, `newRequest`, `requestStatusChanged`, `newMessage`, `messagesRead`, `newAppointment`, `appointmentStatusChanged`. Unirse al grupo `user:{userId}`. |
 
 ## Ejemplos rapidos (PowerShell)
 

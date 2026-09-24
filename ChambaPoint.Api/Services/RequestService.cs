@@ -203,6 +203,21 @@ public class RequestService : IRequestService
         }
 
         request.Status = normalizedStatus;
+        if (normalizedStatus == RequestStatuses.Completada)
+        {
+            request.CompletedAt = DateTime.UtcNow;
+            if (!request.Price.HasValue || request.Price.Value <= 0)
+            {
+                request.Price = request.Category switch
+                {
+                    RequestCategories.Plomeria => 150m,
+                    RequestCategories.Electricidad => 180m,
+                    RequestCategories.Carpinteria => 200m,
+                    RequestCategories.Pintura => 220m,
+                    _ => 150m
+                };
+            }
+        }
         await _db.SaveChangesAsync(ct);
 
         return (request, 200, null);
