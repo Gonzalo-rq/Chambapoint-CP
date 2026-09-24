@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/wwwroot/
+*.db
+*.db-shm
+*.db-wal
+appsettings.Development.json
+.git/
+.vs/
+.idea/
+*.md
+docs/

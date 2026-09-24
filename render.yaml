@@ -1,15 +1,12 @@
 services:
   - type: web
     name: chambapoint-api
-    runtime: dotnet
+    runtime: docker
     plan: free
-    rootDir: ChambaPoint.Api
-    buildCommand: dotnet build -c Release
-    startCommand: dotnet run -c Release --urls http://0.0.0.0:$PORT
     healthCheckPath: /health
     envVars:
       - key: ConnectionStrings__DefaultConnection
-        value: Data Source=/var/data/chambapoint.db
+        value: Data Source=chambapoint.db
       - key: ConnectionStrings__Redis
         sync: false
       - key: RabbitMQ__Uri
@@ -22,7 +19,3 @@ services:
         value: ChambaPointClients
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
-    disk:
-      name: chambapoint-data
-      mountPath: /var/data
-      sizeGB: 1
