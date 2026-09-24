@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/components.css" />
   <link rel="stylesheet" href="css/screens/explore.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
 <body>
   <div class="app-shell">
@@ -42,31 +43,22 @@
         <button type="button" class="chip" data-profession="Pintura" role="tab" aria-selected="false">Pintura</button>
       </div>
 
-      <div class="map-panel" id="mapPanel" aria-label="Mapa de Lima con técnicos cercanos">
-        <button type="button" class="pin" style="left: 28%; top: 42%" data-zone="San Juan de Lurigancho" aria-label="San Juan de Lurigancho">
-          <span class="pin-dot"></span>
-          <span class="pin-label">SJL</span>
-        </button>
-        <button type="button" class="pin" style="left: 55%; top: 55%" data-zone="UNI" aria-label="UNI">
-          <span class="pin-dot"></span>
-          <span class="pin-label">UNI</span>
-        </button>
-        <button type="button" class="pin" style="left: 72%; top: 38%" data-zone="Zárate" aria-label="Zárate">
-          <span class="pin-dot"></span>
-          <span class="pin-label">ZÁRATE</span>
-        </button>
-        <span class="map-label">Lima · mapa visual</span>
+      <div class="map-toolbar">
+        <span class="map-title">Técnicos en el mapa</span>
+        <button type="button" class="map-locate" id="locateBtn" aria-label="Mi ubicación">Mi ubicación</button>
       </div>
+      <div class="map-panel" id="map" role="application" aria-label="Mapa de Lima con técnicos cercanos"></div>
 
       <div class="section-head">
         <h2>Recomendados Cerca</h2>
-        <a href="#" id="verMapa">Ver Mapa</a>
+        <a href="#map" id="verMapa">Ver Mapa</a>
       </div>
 
       <div id="workersList" aria-live="polite"></div>
     </main>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script type="module" src="js/screens/explore.js"></script>
 </body>
 </html>

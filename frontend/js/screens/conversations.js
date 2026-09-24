@@ -8,21 +8,25 @@ const user = requireAuth();
 if (!user) throw new Error("Sin sesión");
 
 document.getElementById("userAvatar").outerHTML = avatarHtml(user);
-document.body.insertAdjacentHTML("beforeend", bottomNav("messages"));
+document.body.insertAdjacentHTML("beforeend", bottomNav("messages", user.role));
 
 const listEl = document.getElementById("convList");
 const searchInput = document.getElementById("convSearch");
 const emptyEl = document.getElementById("convEmpty");
 
 let conversations = [];
+let loadSeq = 0;
 
 async function load() {
+  const seq = ++loadSeq;
   showSkeleton(listEl, 4);
   try {
     const data = await api("/api/messages");
+    if (seq !== loadSeq) return;
     conversations = data.conversations || [];
     render(conversations);
   } catch (err) {
+    if (seq !== loadSeq) return;
     listEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     toast(err.message, "error");
   }
@@ -41,6 +45,11 @@ function render(items) {
   emptyEl.hidden = filtered.length > 0;
   if (!filtered.length) {
     listEl.innerHTML = "";
+    if (q && items.length) {
+      emptyEl.innerHTML = `<h3>Sin resultados</h3><p>No encontramos conversaciones con "${escapeHtml(q)}".</p>`;
+    } else {
+      emptyEl.innerHTML = `<h3>Sin conversaciones</h3><p>Acuerda un servicio desde Solicitudes o el perfil del técnico.</p><p style="margin-top:12px"><a class="btn btn-primary" href="explore.html">Explorar</a></p>`;
+    }
     return;
   }
 
@@ -83,5 +92,5 @@ onHub("newMessage", () => {
   load();
 });
 
-connectHub().then(() => load());
+connectHub().catch(() => null).then(() => load());
 window.addEventListener("beforeunload", () => disconnectHub());

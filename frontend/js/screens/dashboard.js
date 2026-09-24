@@ -20,15 +20,20 @@ const activityEl = document.getElementById("recentActivity");
 showSkeleton(pendingEl, 2);
 showSkeleton(activityEl, 3);
 
+let loadSeq = 0;
+
 async function load() {
+  const seq = ++loadSeq;
   try {
     const d = await api("/api/dashboard/worker");
+    if (seq !== loadSeq) return;
     renderHeader(d);
     renderEarnings(d.weeklyEarnings, d.weeklyChart || []);
     renderCounters(d.counters || {});
     renderPending(d.pendingAppointments || []);
     renderActivity(d.recentActivity || []);
   } catch (err) {
+    if (seq !== loadSeq) return;
     pendingEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     activityEl.innerHTML = "";
     toast(err.message, "error");
@@ -151,5 +156,5 @@ onHub("newRequest", () => load());
 onHub("appointmentStatusChanged", () => load());
 onHub("newAppointment", () => load());
 
-connectHub().then(() => load());
+connectHub().catch(() => null).then(() => load());
 window.addEventListener("beforeunload", () => disconnectHub());

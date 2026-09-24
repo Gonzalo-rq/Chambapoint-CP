@@ -11,7 +11,11 @@ export async function connectHub() {
   if (!user || !token) return null;
 
   if (!window.signalR) {
-    await loadScript("https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.7/dist/browser/signalr.min.js");
+    try {
+      await loadScript("https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.7/dist/browser/signalr.min.js");
+    } catch {
+      return null;
+    }
   }
 
   connection = new window.signalR.HubConnectionBuilder()

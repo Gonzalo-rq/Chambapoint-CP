@@ -58,11 +58,11 @@ function validate() {
     fieldError(passwordInput, "");
   }
 
-  if (confirm !== password) {
-    fieldError(confirmInput, "Las contraseñas no coinciden.");
-    ok = false;
-  } else if (!confirm) {
+  if (!confirm) {
     fieldError(confirmInput, "Confirma tu contraseña.");
+    ok = false;
+  } else if (confirm !== password) {
+    fieldError(confirmInput, "Las contraseñas no coinciden.");
     ok = false;
   } else {
     fieldError(confirmInput, "");

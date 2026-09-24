@@ -11,6 +11,7 @@ const params = new URLSearchParams(window.location.search);
 const withUserId = Number(params.get("with"));
 if (!withUserId) {
   window.location.href = "conversations.html";
+  throw new Error("Sin conversacion");
 }
 
 const headerName = document.getElementById("peerName");
@@ -30,8 +31,17 @@ let loadingMore = false;
 async function loadPeerAndHistory() {
   showSkeleton(messagesEl, 4);
   try {
-    const data = await api(`/api/messages?withUserId=${withUserId}&page=1&pageSize=${pageSize}`);
-    const first = (data.items || [])[0];
+    const probe = await api(`/api/messages?withUserId=${withUserId}&page=1&pageSize=${pageSize}`);
+    const total = Number(probe.total) || 0;
+    const lastPage = Math.max(1, Math.ceil(total / pageSize));
+    page = lastPage;
+
+    let data = probe;
+    if (lastPage > 1) {
+      data = await api(`/api/messages?withUserId=${withUserId}&page=${lastPage}&pageSize=${pageSize}`);
+    }
+
+    const first = (probe.items || [])[0] || (data.items || [])[0];
     peer = first?.senderId === withUserId ? first.sender : first?.receiver;
     if (peer?.id === user.id || peer?.Id === user.id) {
       peer = first?.senderId === withUserId ? first.receiver : first.sender;
@@ -41,9 +51,6 @@ async function loadPeerAndHistory() {
     }
     renderHeader(peer);
     renderMessages(data.items || []);
-    if (data.markedAsRead) {
-      /* already handled by API */
-    }
   } catch (err) {
     messagesEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     toast(err.message, "error");
@@ -52,7 +59,7 @@ async function loadPeerAndHistory() {
 
 function renderHeader(p) {
   headerName.textContent = p.name || `Usuario #${withUserId}`;
-  headerSub.textContent = p.avatarUrl || "Chat en vivo";
+  headerSub.textContent = p.profession || "Chat en vivo";
   headerAvatar.outerHTML = avatarHtml(p, "avatar-sm");
 }
 
@@ -95,9 +102,9 @@ async function appendMessage(m) {
 }
 
 async function loadOlder() {
-  if (loadingMore) return;
+  if (loadingMore || page <= 1) return;
   loadingMore = true;
-  page += 1;
+  page -= 1;
   try {
     const data = await api(`/api/messages?withUserId=${withUserId}&page=${page}&pageSize=${pageSize}`);
     const items = data.items || [];
@@ -114,10 +121,12 @@ async function loadOlder() {
           </div>`;
         })
         .join("");
+      const prevHeight = messagesEl.scrollHeight;
       messagesEl.insertAdjacentHTML("afterbegin", html);
+      messagesEl.scrollTop += messagesEl.scrollHeight - prevHeight;
     }
   } catch {
-    /* ignore older page errors */
+    page += 1;
   } finally {
     loadingMore = false;
   }

@@ -46,15 +46,16 @@ export function statusBadge(status) {
   return `<span class="badge ${map[status] || "badge-neutral"}">${escapeHtml(status)}</span>`;
 }
 
-export function bottomNav(active = "explore") {
+export function bottomNav(active = "explore", role = null) {
   const items = [
     { id: "explore", href: "explore.html", label: "Explorar", path: "M11 4a7 7 0 1 0 4.9 12l3.1 3.1 1.4-1.4-3.1-3.1A7 7 0 0 0 11 4zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10z" },
     { id: "requests", href: "requests.html", label: "Solicitudes", path: "M8 4h8a2 2 0 0 1 2 2v14l-6-3-6 3V6a2 2 0 0 1 2-2z" },
     { id: "messages", href: "conversations.html", label: "Mensajes", path: "M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4V6z" },
     { id: "profile", href: "dashboard.html", label: "Perfil", path: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 9a8 8 0 0 1 16 0H4z" },
   ];
+  const visible = role === "Customer" ? items.filter((it) => it.id !== "profile") : items;
   return `<nav class="bottom-nav" aria-label="Navegación principal">
-    ${items
+    ${visible
       .map(
         (it) => `<a href="${it.href}" class="${active === it.id ? "active" : ""}">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${it.path}"/></svg>
