@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1B7A3D" />
+  <title>Mis Solicitudes — ChambaPoint</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/screens/requests.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="explore.html">ChambaPoint</a>
+      <span class="spacer"></span>
+      <span id="userAvatar" class="avatar"></span>
+    </header>
+
+    <main class="page">
+      <h1 style="font-size:22px;font-weight:800;margin-bottom:6px">Mis Solicitudes</h1>
+      <p class="text-muted" style="font-size:13px;margin-bottom:16px">Administra tus chambas activas e historial.</p>
+
+      <div class="tabs-pill" role="tablist">
+        <button type="button" class="tab-btn active" data-status="activas" role="tab" aria-selected="true">Activas</button>
+        <button type="button" class="tab-btn" data-status="historial" role="tab" aria-selected="false">Historial</button>
+      </div>
+
+      <div id="requestsList" aria-live="polite"></div>
+
+      <div class="list-section-title" id="apptTitle" hidden>Citas</div>
+      <div id="appointmentsList"></div>
+    </main>
+  </div>
+
+  <div id="modalRoot"></div>
+
+  <script type="module" src="js/screens/requests.js"></script>
+</body>
+</html>
