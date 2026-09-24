@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1B7A3D" />
+  <title>Iniciar sesión — ChambaPoint</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/screens/auth.css" />
+</head>
+<body>
+  <main class="page-auth">
+    <div class="auth-brand">
+      <div class="auth-brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21s-7-4.5-7-11a7 7 0 1 1 14 0c0 6.5-7 11-7 11z" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg>
+      </div>
+      <span class="auth-brand-name">ChambaPoint</span>
+    </div>
+
+    <h1 class="auth-heading">Bienvenido de vuelta</h1>
+    <p class="auth-sub">Inicia sesión para continuar con tu chamba.</p>
+
+    <form class="auth-form" id="loginForm" novalidate>
+      <div class="field">
+        <label for="email">Correo electrónico</label>
+        <input id="email" name="email" type="email" autocomplete="email" placeholder="tu@email.com" required />
+        <span class="field-error" data-for="email"></span>
+      </div>
+
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <div class="input-icon-wrap">
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required minlength="6" />
+          <button type="button" class="pw-toggle" id="togglePw" aria-label="Mostrar contraseña">Ver</button>
+        </div>
+        <span class="field-error" data-for="password"></span>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Iniciar sesión</button>
+    </form>
+
+    <div class="auth-footer auth-link-row">
+      <span>¿No tienes cuenta?</span>
+      <a href="create-profile.html">Regístrate</a>
+    </div>
+  </main>
+  <script type="module" src="js/screens/login.js"></script>
+</body>
+</html>

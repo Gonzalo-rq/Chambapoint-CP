@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1B7A3D" />
+  <title>Crear perfil — ChambaPoint</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/screens/auth.css" />
+</head>
+<body>
+  <main class="page-auth role-page">
+    <div class="auth-brand">
+      <div class="auth-brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21s-7-4.5-7-11a7 7 0 1 1 14 0c0 6.5-7 11-7 11z" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg>
+      </div>
+      <span class="auth-brand-name">ChambaPoint</span>
+    </div>
+
+    <h1 class="role-title">Create Profile</h1>
+    <p class="role-desc">Choose how you plan to use ChambaPoint and set up your account.</p>
+
+    <div class="stack" id="roleOptions">
+      <button type="button" class="role-option" data-role="Customer" aria-pressed="false">
+        <span class="role-left">
+          <span class="role-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </span>
+          Customer
+        </span>
+        <span class="chevron" aria-hidden="true">›</span>
+      </button>
+
+      <button type="button" class="role-option" data-role="Worker" aria-pressed="false">
+        <span class="role-left">
+          <span class="role-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2" />
+              <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+            </svg>
+          </span>
+          Worker
+        </span>
+        <span class="chevron" aria-hidden="true">›</span>
+      </button>
+    </div>
+
+    <div class="auth-footer auth-link-row">
+      <span>Already have an account?</span>
+      <a href="login.html">Log in</a>
+    </div>
+    <div class="auth-link-row" style="margin-top: 12px">
+      <span>New here?</span>
+      <a href="register.html" id="signupLink">Sign up</a>
+    </div>
+  </main>
+  <script type="module" src="js/screens/onboarding.js"></script>
+</body>
+</html>

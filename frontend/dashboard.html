@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1B7A3D" />
+  <title>Dashboard — ChambaPoint</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="dashboard.html">ChambaPoint</a>
+      <span class="spacer"></span>
+      <span class="avatar" id="userAvatar" title="Sesión activa"></span>
+    </header>
+    <main class="page">
+      <div class="empty-state">
+        <h3>Dashboard del Trabajador</h3>
+        <p>Pantalla disponible en la rama <strong>feat/ui-chat-dashboard</strong>.</p>
+        <p style="margin-top: 12px"><a class="btn btn-outline" href="index.html">Volver al inicio</a></p>
+      </div>
+    </main>
+  </div>
+  <script type="module">
+    import { requireAuth } from "./js/auth.js";
+    const user = requireAuth(["Worker"]);
+    if (user) {
+      const el = document.getElementById("userAvatar");
+      el.textContent = (user.name || "?").charAt(0).toUpperCase();
+      el.title = user.name;
+    }
+  </script>
+</body>
+</html>
