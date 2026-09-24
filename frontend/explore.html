@@ -7,30 +7,66 @@
   <title>Explorar — ChambaPoint</title>
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/screens/explore.css" />
 </head>
 <body>
   <div class="app-shell">
     <header class="app-header">
       <a class="brand" href="explore.html">ChambaPoint</a>
       <span class="spacer"></span>
-      <span class="avatar" id="userAvatar" title="Sesión activa"></span>
+      <span id="userAvatar" class="avatar" title="Mi cuenta"></span>
     </header>
-    <main class="page">
-      <div class="empty-state">
-        <h3>Explorar</h3>
-        <p>Pantalla disponible en la rama <strong>feat/ui-explorar-perfil</strong>.</p>
-        <p style="margin-top: 12px"><a class="btn btn-outline" href="index.html">Volver al inicio</a></p>
+
+    <main class="page" id="explorePage">
+      <div class="explore-search">
+        <input
+          id="searchInput"
+          class="search-input"
+          type="search"
+          placeholder="Buscar electricista, gasfitero..."
+          aria-label="Buscar técnicos"
+        />
+        <button type="button" class="search-btn" id="searchBtn" aria-label="Buscar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+        </button>
       </div>
+
+      <div class="category-chips" id="categoryChips" role="tablist" aria-label="Categorías">
+        <button type="button" class="chip active" data-profession="" role="tab" aria-selected="true">Todas</button>
+        <button type="button" class="chip" data-profession="Plomería" role="tab" aria-selected="false">Plomería</button>
+        <button type="button" class="chip" data-profession="Electricidad" role="tab" aria-selected="false">Electricidad</button>
+        <button type="button" class="chip" data-profession="Carpintería" role="tab" aria-selected="false">Carpintería</button>
+        <button type="button" class="chip" data-profession="Pintura" role="tab" aria-selected="false">Pintura</button>
+      </div>
+
+      <div class="map-panel" id="mapPanel" aria-label="Mapa de Lima con técnicos cercanos">
+        <button type="button" class="pin" style="left: 28%; top: 42%" data-zone="San Juan de Lurigancho" aria-label="San Juan de Lurigancho">
+          <span class="pin-dot"></span>
+          <span class="pin-label">SJL</span>
+        </button>
+        <button type="button" class="pin" style="left: 55%; top: 55%" data-zone="UNI" aria-label="UNI">
+          <span class="pin-dot"></span>
+          <span class="pin-label">UNI</span>
+        </button>
+        <button type="button" class="pin" style="left: 72%; top: 38%" data-zone="Zárate" aria-label="Zárate">
+          <span class="pin-dot"></span>
+          <span class="pin-label">ZÁRATE</span>
+        </button>
+        <span class="map-label">Lima · mapa visual</span>
+      </div>
+
+      <div class="section-head">
+        <h2>Recomendados Cerca</h2>
+        <a href="#" id="verMapa">Ver Mapa</a>
+      </div>
+
+      <div id="workersList" aria-live="polite"></div>
     </main>
   </div>
-  <script type="module">
-    import { requireAuth } from "./js/auth.js";
-    const user = requireAuth();
-    if (user) {
-      const el = document.getElementById("userAvatar");
-      el.textContent = (user.name || "?").charAt(0).toUpperCase();
-      el.title = user.name;
-    }
-  </script>
+
+  <script type="module" src="js/screens/explore.js"></script>
 </body>
 </html>
