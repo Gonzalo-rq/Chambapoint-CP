@@ -6,6 +6,7 @@ using ChambaPoint.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChambaPoint.Api.Controllers;
@@ -33,6 +34,9 @@ public class AuthController : ControllerBase
 
     public record RegisterRequest(string Name, string Email, string Password, string? Role, string? AvatarUrl);
 
+    private sealed record CachedUser(int Id, string Name, string Email, string Role, string? AvatarUrl, DateTime CreatedAt, bool HasWorkerProfile);
+
+    [EnableRateLimiting("auth")]
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
     {
@@ -93,6 +97,7 @@ public class AuthController : ControllerBase
 
     public record LoginRequest(string Email, string Password);
 
+    [EnableRateLimiting("auth")]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
@@ -133,10 +138,10 @@ public class AuthController : ControllerBase
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var cached = await _cache.GetAsync<User>("user:" + userId, ct);
+        var cached = await _cache.GetAsync<CachedUser>("user:" + userId, ct);
         if (cached is not null)
         {
-            return Ok(new { user = BuildUserDto(cached) });
+            return Ok(new { user = BuildCachedUserDto(cached) });
         }
 
         var user = await _db.Users
@@ -166,7 +171,15 @@ public class AuthController : ControllerBase
 
     private async Task CacheUserAsync(User user, CancellationToken ct)
     {
-        await _cache.SetAsync("user:" + user.Id, user, TimeSpan.FromMinutes(30), ct);
+        var dto = new CachedUser(
+            user.Id,
+            user.Name,
+            user.Email,
+            user.Role,
+            user.AvatarUrl,
+            user.CreatedAt,
+            user.WorkerProfile is not null);
+        await _cache.SetAsync("user:" + user.Id, dto, TimeSpan.FromMinutes(30), ct);
     }
 
     private int? GetUserId()
@@ -188,6 +201,20 @@ public class AuthController : ControllerBase
             user.AvatarUrl,
             user.CreatedAt,
             hasWorkerProfile = user.WorkerProfile is not null
+        };
+    }
+
+    private static object BuildCachedUserDto(CachedUser user)
+    {
+        return new
+        {
+            user.Id,
+            user.Name,
+            user.Email,
+            user.Role,
+            user.AvatarUrl,
+            user.CreatedAt,
+            hasWorkerProfile = user.HasWorkerProfile
         };
     }
 }

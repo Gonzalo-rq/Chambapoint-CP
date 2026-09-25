@@ -36,6 +36,7 @@ public class MessagesController : ControllerBase
         var (message, statusCode, error) = await _messageService.SendAsync(userId.Value, input, ct);
 
         if (statusCode == 400) return BadRequest(new { message = error });
+        if (statusCode == 403) return StatusCode(403, new { message = error });
         if (statusCode == 404) return NotFound(new { message = error });
         if (message == null) return StatusCode(500, new { message = "Error interno enviando el mensaje." });
 

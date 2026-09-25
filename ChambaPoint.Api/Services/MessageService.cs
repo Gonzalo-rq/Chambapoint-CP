@@ -52,10 +52,22 @@ public class MessageService : IMessageService
 
         if (input.RequestId.HasValue)
         {
-            var requestExists = await _db.Requests.AnyAsync(r => r.Id == input.RequestId.Value, ct);
-            if (!requestExists)
+            var request = await _db.Requests
+                .Include(r => r.Worker)
+                .FirstOrDefaultAsync(r => r.Id == input.RequestId.Value, ct);
+            if (request == null)
             {
                 return (null, 400, "La solicitud referenciada no existe.");
+            }
+
+            var isCustomer = request.CustomerId == senderId;
+            var isAssignedWorker = request.WorkerId.HasValue
+                && request.Worker != null
+                && request.Worker.UserId == senderId;
+
+            if (!isCustomer && !isAssignedWorker)
+            {
+                return (null, 403, "No formas parte de esa solicitud.");
             }
         }
 

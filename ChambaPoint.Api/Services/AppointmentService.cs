@@ -68,13 +68,24 @@ public class AppointmentService : IAppointmentService
         // Determinar Worker y Customer
         int customerId = request.CustomerId;
         int workerId = 0;
+        var isCustomer = customerId == currentUserId;
 
         if (request.WorkerId.HasValue)
         {
             workerId = request.WorkerId.Value;
         }
-        else if (input.WorkerId.HasValue)
+        else
         {
+            if (!isCustomer)
+            {
+                return (null, 403, "La solicitud sin trabajador asignado solo puede agendarla el cliente.", null);
+            }
+
+            if (!input.WorkerId.HasValue)
+            {
+                return (null, 400, "Debe especificar un trabajador para agendar la cita.", null);
+            }
+
             var workerExists = await _db.Workers.AnyAsync(w => w.Id == input.WorkerId.Value, ct);
             if (!workerExists)
             {
@@ -83,10 +94,6 @@ public class AppointmentService : IAppointmentService
             workerId = input.WorkerId.Value;
             request.WorkerId = workerId;
         }
-        else
-        {
-            return (null, 400, "Debe especificar un trabajador para agendar la cita.", null);
-        }
 
         var worker = await _db.Workers.Include(w => w.User).FirstOrDefaultAsync(w => w.Id == workerId, ct);
         if (worker == null)
@@ -94,8 +101,6 @@ public class AppointmentService : IAppointmentService
             return (null, 404, "Trabajador no encontrado.", null);
         }
 
-        // Validar que el usuario que agenda sea el cliente o el trabajador de la solicitud
-        var isCustomer = customerId == currentUserId;
         var isWorker = worker.UserId == currentUserId;
 
         if (!isCustomer && !isWorker)
