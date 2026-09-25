@@ -2,6 +2,7 @@ import { api } from "../api.js";
 import { requireAuth } from "../auth.js";
 import { toast, setLoading, showSkeleton, fieldError } from "../ui.js";
 import { avatarHtml, escapeHtml, statusBadge, bottomNav } from "../components.js";
+import { formatDate, formatRangeDate } from "../dates.js";
 
 const user = requireAuth();
 if (!user) throw new Error("Sin sesión");
@@ -78,7 +79,7 @@ function renderRequests(items) {
         </div>
         <div class="req-meta">
           <span>${escapeHtml(r.category)} · ${escapeHtml(r.urgency)}</span>
-          <span>${r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}</span>
+          <span>${r.createdAt ? formatDate(r.createdAt) : ""}</span>
         </div>
         <div class="req-party">
           ${avatarHtml(partyUser || { name: party })}
@@ -168,7 +169,7 @@ function appointmentCard(a) {
     <article class="appointment-card">
       <div class="appt-label">📅 Cita agendada ${statusBadge(a.status)}</div>
       <h3>${escapeHtml(a.request?.description || a.description || "Cita")}</h3>
-      <p class="when">${a.dateTime ? new Date(a.dateTime).toLocaleString() : ""} · ${escapeHtml(a.request?.category || "")}</p>
+      <p class="when">${a.dateTime ? formatRangeDate(a.dateTime) : ""} · ${escapeHtml(a.request?.category || "")}</p>
       <p class="desc">${escapeHtml(a.description || "")}</p>
       ${
         showActions

@@ -45,7 +45,11 @@ function workerIcon(name) {
 }
 
 function initMap() {
-  if (map || typeof L === "undefined") return;
+  if (map) return;
+  if (typeof L === "undefined") {
+    toast("No pudimos cargar el mapa. Revisa tu conexión.", "warning");
+    return;
+  }
   map = L.map("map", {
     zoomControl: true,
     attributionControl: true,
@@ -68,8 +72,8 @@ function placeWorkerMarkers(workers) {
   const bounds = [];
   currentWorkers.forEach((w, i) => {
     const id = Number(w.id) || i;
-    const lat = LIMA[0] + (((id * 37) % 9) - 4) * 0.018;
-    const lng = LIMA[1] + (((id * 53) % 9) - 4) * 0.02;
+    const lat = LIMA[0] + (((id * 37) % 7) - 3) * 0.01;
+    const lng = LIMA[1] + (((id * 53) % 7) - 3) * 0.01;
     const rating = Number(w.ratingAverage) || 0;
     const marker = L.marker([lat, lng], { icon: workerIcon(w.name) }).addTo(markersLayer);
     bounds.push([lat, lng]);
@@ -88,11 +92,15 @@ function placeWorkerMarkers(workers) {
     });
   });
   if (bounds.length) {
-    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 13 });
+    map.setView(LIMA, 13);
   }
 }
 
 function locateMe() {
+  if (!map || typeof L === "undefined") {
+    toast("El mapa no está disponible.", "warning");
+    return;
+  }
   if (!navigator.geolocation) {
     toast("Tu navegador no soporta geolocalización.", "warning");
     return;

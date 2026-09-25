@@ -69,6 +69,16 @@ public class AuthController : ControllerBase
         user.PasswordHash = _hasher.HashPassword(user, request.Password);
 
         _db.Users.Add(user);
+
+        if (role == Roles.Worker)
+        {
+            _db.Workers.Add(new Worker
+            {
+                User = user,
+                Profession = RequestCategories.Plomeria
+            });
+        }
+
         await _db.SaveChangesAsync(ct);
 
         await CacheUserAsync(user, ct);

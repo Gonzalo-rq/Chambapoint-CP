@@ -1,0 +1,70 @@
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: var(--space-6) var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.profile-card h1 {
+  font-size: var(--fs-xl);
+  margin-top: var(--space-3);
+}
+
+.profile-role {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.profile-email {
+  font-size: var(--fs-base);
+  margin-top: 6px;
+  word-break: break-all;
+}
+
+.list-row-danger .row-icon-danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.list-row-danger .row-title {
+  color: var(--color-danger);
+}
+
+.list-row-danger:hover {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.profile-version {
+  text-align: center;
+  font-size: var(--fs-sm);
+  margin-top: var(--space-8);
+}
+
+.edit-intro {
+  font-size: var(--fs-base);
+  margin: -6px 0 var(--space-4);
+}
+
+.edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.edit-actions {
+  margin-top: var(--space-2);
+  padding-bottom: var(--space-4);
+}

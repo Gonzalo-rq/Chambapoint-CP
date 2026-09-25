@@ -2,6 +2,7 @@ import { api } from "../api.js";
 import { requireAuth } from "../auth.js";
 import { toast, showSkeleton } from "../ui.js";
 import { avatarHtml, escapeHtml, bottomNav } from "../components.js";
+import { parseApiDate } from "../dates.js";
 import { connectHub, onHub, disconnectHub } from "../hub.js";
 
 const user = requireAuth();
@@ -79,11 +80,12 @@ function render(items) {
 }
 
 function formatTime(iso) {
-  const d = new Date(iso);
+  const d = parseApiDate(iso);
+  if (!d) return "";
   const now = new Date();
   const sameDay = d.toDateString() === now.toDateString();
-  if (sameDay) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return d.toLocaleDateString([], { day: "2-digit", month: "2-digit" });
+  if (sameDay) return d.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit" });
 }
 
 searchInput.addEventListener("input", () => render(conversations));

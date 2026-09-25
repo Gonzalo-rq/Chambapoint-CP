@@ -2,6 +2,7 @@ import { api } from "../api.js";
 import { requireAuth, logout } from "../auth.js";
 import { toast, setLoading, showSkeleton } from "../ui.js";
 import { avatarHtml, escapeHtml, statusBadge, bottomNav } from "../components.js";
+import { formatRangeDate } from "../dates.js";
 import { connectHub, onHub, disconnectHub } from "../hub.js";
 
 const user = requireAuth(["Worker"]);
@@ -54,7 +55,8 @@ function renderEarnings(earn, chart) {
     .map((c) => {
       const amount = Number(c.amount) || 0;
       const h = Math.max(8, Math.round((amount / max) * 72));
-      const today = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       const active = c.date === today ? "is-today" : "";
       return `
         <div class="bar-col ${active}" title="${escapeHtml(c.formatted || "")}">
@@ -96,7 +98,9 @@ function renderPending(items) {
       <div class="appt-head">
         <div>
           <h3>${escapeHtml(a.title || "Cita")}</h3>
-          <p class="text-muted">${escapeHtml(a.formattedDate || "")} · ${escapeHtml(a.category || "")}</p>
+          <p class="text-muted">${
+            a.dateTime ? formatRangeDate(a.dateTime) : ""
+          } · ${escapeHtml(a.category || "")}</p>
         </div>
         ${statusBadge(a.status)}
       </div>

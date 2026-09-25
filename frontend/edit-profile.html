@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1B7A3D" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <title>Editar perfil — ChambaPoint</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/screens/profile.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="dashboard.html">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21s-7-4.5-7-11a7 7 0 1 1 14 0c0 6.5-7 11-7 11z" />
+            <circle cx="12" cy="10" r="2.5" />
+          </svg>
+        </span>
+        ChambaPoint
+      </a>
+      <span class="spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="dashboard.html">Cancelar</a>
+    </header>
+
+    <main class="page page-narrow" id="editPage">
+      <div class="section-title">Tu perfil profesional</div>
+      <p class="edit-intro text-muted">
+        Esto es lo que ven tus clientes antes de contratarte. Mantenlo al día.
+      </p>
+
+      <div id="formSkeleton" class="stack" aria-hidden="true">
+        <div class="skeleton" style="height: 46px"></div>
+        <div class="skeleton" style="height: 120px"></div>
+        <div class="skeleton" style="height: 46px"></div>
+      </div>
+
+      <form class="stack edit-form" id="editForm" novalidate hidden>
+        <div class="field">
+          <label for="profession">Profesión</label>
+          <select id="profession" required>
+            <option value="Plomería">Plomería</option>
+            <option value="Electricidad">Electricidad</option>
+            <option value="Carpintería">Carpintería</option>
+            <option value="Pintura">Pintura</option>
+          </select>
+          <span class="field-error" data-for="profession"></span>
+        </div>
+
+        <div class="field">
+          <label for="about">Sobre ti</label>
+          <textarea id="about" rows="4" maxlength="400" placeholder="Cuéntale a tus clientes quién eres, qué haces y cómo trabajas." required></textarea>
+          <span class="field-hint"><span id="aboutCount">0</span>/400</span>
+          <span class="field-error" data-for="about"></span>
+        </div>
+
+        <div class="edit-grid">
+          <div class="field">
+            <label for="experienceYears">Años de experiencia</label>
+            <input id="experienceYears" type="number" min="0" max="60" inputmode="numeric" required />
+            <span class="field-error" data-for="experienceYears"></span>
+          </div>
+          <div class="field">
+            <label for="distanceKm">Radio de trabajo (km)</label>
+            <input id="distanceKm" type="number" min="0" step="0.5" inputmode="decimal" required />
+            <span class="field-error" data-for="distanceKm"></span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="jobsCount">Trabajos realizados</label>
+          <input id="jobsCount" type="number" min="0" inputmode="numeric" required />
+          <span class="field-hint">Se muestra en tu perfil público.</span>
+          <span class="field-error" data-for="jobsCount"></span>
+        </div>
+
+        <div class="field">
+          <label for="certifications">Certificaciones</label>
+          <textarea id="certifications" rows="3" placeholder="Una por línea. Ej. Técnico en instalaciones eléctricas"></textarea>
+          <span class="field-hint">Opcional · una por línea</span>
+        </div>
+
+        <div class="edit-actions">
+          <button type="submit" class="btn btn-primary btn-block" id="saveBtn">Guardar cambios</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <div id="modalRoot"></div>
+  <script type="module" src="js/screens/edit-profile.js"></script>
+</body>
+</html>

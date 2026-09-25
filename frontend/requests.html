@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#1B7A3D" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <title>Mis Solicitudes — ChambaPoint</title>
   <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/components.css" />
@@ -12,14 +13,24 @@
 <body>
   <div class="app-shell">
     <header class="app-header">
-      <a class="brand" href="explore.html">ChambaPoint</a>
+      <a class="brand" href="explore.html">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21s-7-4.5-7-11a7 7 0 1 1 14 0c0 6.5-7 11-7 11z" />
+            <circle cx="12" cy="10" r="2.5" />
+          </svg>
+        </span>
+        ChambaPoint
+      </a>
       <span class="spacer"></span>
       <span id="userAvatar" class="avatar"></span>
     </header>
 
-    <main class="page">
-      <h1 style="font-size:22px;font-weight:800;margin-bottom:6px">Mis Solicitudes</h1>
-      <p class="text-muted" style="font-size:13px;margin-bottom:16px">Administra tus chambas activas e historial.</p>
+    <main class="page page-narrow">
+      <div class="page-intro">
+        <h1>Mis solicitudes</h1>
+        <p class="text-muted">Administra tus chambas activas e historial.</p>
+      </div>
 
       <div class="tabs-pill" role="tablist">
         <button type="button" class="tab-btn active" data-status="activas" role="tab" aria-selected="true">Activas</button>

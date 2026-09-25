@@ -13,7 +13,7 @@
 
 .conv-search input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(27, 122, 61, 0.15);
+  box-shadow: var(--shadow-focus);
 }
 
 .conv-list {
@@ -242,7 +242,7 @@
 
 .chat-composer input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(27, 122, 61, 0.15);
+  box-shadow: var(--shadow-focus);
 }
 
 .chat-composer .btn-icon {
@@ -251,4 +251,33 @@
   height: 46px;
   min-height: 46px;
   border-radius: 50%;
+}
+
+@media (min-width: 1024px) {
+  body.chat-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6) var(--space-4) 0;
+  }
+
+  .chat-shell {
+    width: min(100%, 880px);
+    height: calc(100dvh - var(--space-6));
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .chat-messages,
+  .chat-composer {
+    max-width: 760px;
+    width: 100%;
+    margin-inline: auto;
+  }
+
+  .bubble {
+    max-width: 60%;
+  }
 }

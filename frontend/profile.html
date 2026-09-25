@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1B7A3D" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <title>Mi perfil — ChambaPoint</title>
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/screens/profile.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="profile.html">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21s-7-4.5-7-11a7 7 0 1 1 14 0c0 6.5-7 11-7 11z" />
+            <circle cx="12" cy="10" r="2.5" />
+          </svg>
+        </span>
+        ChambaPoint
+      </a>
+    </header>
+
+    <main class="page page-narrow" id="profilePage">
+      <section class="profile-card">
+        <span id="profileAvatar" class="avatar avatar-lg" aria-hidden="true"></span>
+        <h1 id="profileName">—</h1>
+        <p class="profile-role" id="profileRole">Cliente</p>
+        <p class="profile-email text-muted" id="profileEmail"></p>
+      </section>
+
+      <div class="section-title">Cuenta</div>
+      <div class="stack">
+        <a class="list-row" href="requests.html">
+          <span class="row-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 4h8a2 2 0 0 1 2 2v14l-6-3-6 3V6a2 2 0 0 1 2-2z" />
+            </svg>
+          </span>
+          <span class="row-body">
+            <span class="row-title">Mis solicitudes</span>
+            <span class="row-sub">Historial y citas agendadas</span>
+          </span>
+          <svg class="row-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </a>
+        <a class="list-row" href="conversations.html">
+          <span class="row-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4V6z" />
+            </svg>
+          </span>
+          <span class="row-body">
+            <span class="row-title">Mensajes</span>
+            <span class="row-sub">Chatea con tus técnicos</span>
+          </span>
+          <svg class="row-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </a>
+      </div>
+
+      <div class="section-title">Sesión</div>
+      <button type="button" class="list-row list-row-danger" id="logoutBtn">
+        <span class="row-icon row-icon-danger" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 17l5-5-5-5" />
+            <path d="M20 12H9" />
+            <path d="M12 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h6" />
+          </svg>
+        </span>
+        <span class="row-body">
+          <span class="row-title">Cerrar sesión</span>
+          <span class="row-sub">Salir de ChambaPoint en este dispositivo</span>
+        </span>
+      </button>
+
+      <p class="profile-version text-muted">ChambaPoint v1.0</p>
+    </main>
+  </div>
+
+  <div id="modalRoot"></div>
+  <script type="module" src="js/screens/profile.js"></script>
+</body>
+</html>

@@ -1,11 +1,14 @@
 import { api } from "../api.js";
 import { requireAuth } from "../auth.js";
 import { toast, setLoading, showSkeleton } from "../ui.js";
-import { avatarHtml, escapeHtml } from "../components.js";
+import { avatarHtml, escapeHtml, bottomNav } from "../components.js";
+import { formatTime } from "../dates.js";
 import { connectHub, onHub, disconnectHub } from "../hub.js";
 
 const user = requireAuth();
 if (!user) throw new Error("Sin sesión");
+
+document.body.insertAdjacentHTML("beforeend", bottomNav("messages", user.role));
 
 const params = new URLSearchParams(window.location.search);
 const withUserId = Number(params.get("with"));
@@ -71,7 +74,7 @@ function renderMessages(items) {
   messagesEl.innerHTML = items
     .map((m) => {
       const mine = m.senderId === user.id;
-      const time = new Date(m.sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const time = formatTime(m.sentAt);
       return `
       <div class="bubble-row ${mine ? "mine" : ""}">
         <div class="bubble">
@@ -86,7 +89,7 @@ function renderMessages(items) {
 
 async function appendMessage(m) {
   const mine = m.senderId === user.id;
-  const time = new Date(m.sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const time = formatTime(m.sentAt);
   const empty = messagesEl.querySelector(".empty-state");
   if (empty) empty.remove();
   messagesEl.insertAdjacentHTML(
@@ -112,7 +115,7 @@ async function loadOlder() {
       const html = items
         .map((m) => {
           const mine = m.senderId === user.id;
-          const time = new Date(m.sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const time = formatTime(m.sentAt);
           return `<div class="bubble-row ${mine ? "mine" : ""}">
             <div class="bubble">
               <p>${escapeHtml(m.text)}</p>

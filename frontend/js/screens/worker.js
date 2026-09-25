@@ -1,10 +1,13 @@
 import { api } from "../api.js";
 import { requireAuth } from "../auth.js";
 import { toast, setLoading, fieldError } from "../ui.js";
-import { avatarHtml, escapeHtml, starsHtml } from "../components.js";
+import { avatarHtml, escapeHtml, starsHtml, bottomNav } from "../components.js";
+import { formatDate } from "../dates.js";
 
 const user = requireAuth();
 if (!user) throw new Error("Sin sesión");
+
+document.body.insertAdjacentHTML("beforeend", bottomNav("explore", user.role));
 
 const root = document.getElementById("profileRoot");
 const modalRoot = document.getElementById("modalRoot");
@@ -239,7 +242,7 @@ function reviewItem(r) {
               .join("")}</div>`
           : ""
       }
-      <p class="text-muted" style="font-size:11px;margin-top:6px">${r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ""}</p>
+      <p class="text-muted" style="font-size:11px;margin-top:6px">${r.createdAt ? formatDate(r.createdAt, { dateStyle: "short", timeStyle: undefined }) : ""}</p>
     </article>`;
 }
 

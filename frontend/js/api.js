@@ -62,6 +62,9 @@ export async function api(path, { method = "GET", body, auth = true, signal } = 
     const message = data?.message || defaultErrorMessage(res.status);
     if (res.status === 401 && auth) {
       clearSession();
+      if (!window.location.pathname.endsWith("login.html")) {
+        window.location.href = "login.html";
+      }
     }
     throw new ApiError(res.status, message);
   }
