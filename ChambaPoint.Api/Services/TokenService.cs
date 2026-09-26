@@ -22,7 +22,12 @@ public class TokenService : ITokenService
 
     public string GenerateToken(User user)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+        var jwtKey = _config["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 16)
+        {
+            jwtKey = "ChambaPoint-Dev-Secret-Key-Cambiar-En-Produccion-2026!";
+        }
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]

@@ -5,6 +5,7 @@ using ChambaPoint.Api.Hubs;
 using ChambaPoint.Api.Models;
 using ChambaPoint.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -45,7 +46,19 @@ builder.Services.AddSingleton<IRequestNotifier, RabbitMqRequestNotifier>();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
-var jwtKey = builder.Configuration["Jwt:Key"]!;
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 16)
+{
+    jwtKey = "ChambaPoint-Dev-Secret-Key-Cambiar-En-Produccion-2026!";
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -79,10 +92,12 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("auth", context =>
     {
-        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ip = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+            ?? context.Connection.RemoteIpAddress?.ToString()
+            ?? "unknown";
         return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 10,
+            PermitLimit = 60,
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0
         });
@@ -103,6 +118,8 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -110,6 +127,8 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+    var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
+    DbInitializer.Seed(db, hasher);
 }
 
 app.MapOpenApi();
