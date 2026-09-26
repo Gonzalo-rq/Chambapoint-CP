@@ -122,16 +122,18 @@ public class RequestsController : ControllerBase
         return Ok(MapToDto(request));
     }
 
-    [Authorize(Roles = Roles.Worker)]
+    [Authorize]
     [HttpPatch("{id:int}")]
-    public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateRequestStatusInput input, CancellationToken ct)
+    public async Task<IActionResult> UpdateStatus(
+        int id, [FromBody] UpdateRequestStatusInput input, CancellationToken ct)
     {
         return await HandleStatusUpdate(id, input, ct);
     }
 
-    [Authorize(Roles = Roles.Worker)]
+    [Authorize]
     [HttpPatch("{id:int}/status")]
-    public async Task<IActionResult> UpdateStatusDirect(int id, [FromBody] UpdateRequestStatusInput input, CancellationToken ct)
+    public async Task<IActionResult> UpdateStatusDirect(
+        int id, [FromBody] UpdateRequestStatusInput input, CancellationToken ct)
     {
         return await HandleStatusUpdate(id, input, ct);
     }
@@ -146,14 +148,16 @@ public class RequestsController : ControllerBase
             return BadRequest(new { message = "El nuevo estado es requerido." });
         }
 
-        var (request, statusCode, error) = await _requestService.UpdateStatusAsync(id, userId.Value, input.Status, ct);
+        var role = GetUserRole() ?? Roles.Customer;
+        var (request, statusCode, error) = await _requestService.UpdateStatusAsync(
+            id, userId.Value, role, input.Status, ct);
 
         if (statusCode == 404) return NotFound(new { message = error });
         if (statusCode == 400) return BadRequest(new { message = error });
         if (statusCode == 403) return StatusCode(403, new { message = error });
+        if (statusCode == 409) return Conflict(new { message = error });
         if (request == null) return StatusCode(500, new { message = "Error inesperado al actualizar la solicitud." });
 
-        // Notificar por RabbitMQ
         await _notifier.PublishAsync("request.status_changed", new
         {
             requestId = request.Id,
@@ -163,7 +167,6 @@ public class RequestsController : ControllerBase
             updatedAt = DateTime.UtcNow
         }, ct);
 
-        // Notificar en tiempo real por SignalR al cliente
         await _hub.Clients.Group($"user:{request.CustomerId}").SendAsync("requestStatusChanged", new
         {
             requestId = request.Id,

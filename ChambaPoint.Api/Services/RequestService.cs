@@ -22,7 +22,8 @@ public interface IRequestService
     Task<(Request? Request, string? Error)> CreateAsync(int customerId, CreateRequestInput input, CancellationToken ct = default);
     Task<(List<Request> Items, int Total)> ListAsync(int userId, string role, string? statusFilter, int page, int pageSize, CancellationToken ct = default);
     Task<Request?> GetByIdAsync(int id, CancellationToken ct = default);
-    Task<(Request? Request, int StatusCode, string? Error)> UpdateStatusAsync(int requestId, int workerUserId, string newStatus, CancellationToken ct = default);
+    Task<(Request? Request, int StatusCode, string? Error)> UpdateStatusAsync(
+        int requestId, int currentUserId, string role, string newStatus, CancellationToken ct = default);
     Task<Worker?> GetWorkerByUserIdAsync(int userId, CancellationToken ct = default);
 }
 
@@ -149,7 +150,12 @@ public class RequestService : IRequestService
             .FirstOrDefaultAsync(r => r.Id == id, ct);
     }
 
-    public async Task<(Request? Request, int StatusCode, string? Error)> UpdateStatusAsync(int requestId, int workerUserId, string newStatus, CancellationToken ct = default)
+    public async Task<(Request? Request, int StatusCode, string? Error)> UpdateStatusAsync(
+        int requestId,
+        int currentUserId,
+        string role,
+        string newStatus,
+        CancellationToken ct = default)
     {
         if (!RequestStatuses.IsValid(newStatus))
         {
@@ -173,54 +179,122 @@ public class RequestService : IRequestService
             return (null, 404, "Solicitud no encontrada.");
         }
 
+        if (request.Status == RequestStatuses.Completada || request.Status == RequestStatuses.Rechazada)
+        {
+            return (null, 400, $"No se puede modificar una solicitud en estado {request.Status}.");
+        }
+
+        var isCustomer = request.CustomerId == currentUserId;
+
+        if (isCustomer)
+        {
+            if (request.Status != RequestStatuses.Pendiente || normalizedStatus != RequestStatuses.Rechazada)
+            {
+                return (null, 400, "El cliente solo puede cancelar solicitudes en estado Pendiente.");
+            }
+
+            request.Status = RequestStatuses.Rechazada;
+            await _db.SaveChangesAsync(ct);
+            return (request, 200, null);
+        }
+
         var worker = await _db.Workers
             .Include(w => w.User)
-            .FirstOrDefaultAsync(w => w.UserId == workerUserId, ct);
+            .FirstOrDefaultAsync(w => w.UserId == currentUserId, ct);
 
         if (worker == null)
         {
             return (null, 403, "El usuario no cuenta con un perfil de trabajador.");
         }
 
-        // Si la solicitud ya tiene un trabajador asignado, solo ese trabajador dueño puede cambiar el estado
         if (request.WorkerId.HasValue && request.WorkerId.Value != worker.Id)
         {
             return (null, 403, "Solo el trabajador asignado a esta solicitud puede modificar su estado.");
         }
 
-        // Si la solicitud era libre (WorkerId == null) y el trabajador la acepta, se le asigna
-        if (!request.WorkerId.HasValue)
+        if (request.Status == RequestStatuses.Pendiente)
         {
             if (normalizedStatus == RequestStatuses.Aceptada)
             {
-                request.WorkerId = worker.Id;
-                request.Worker = worker;
-            }
-            else
-            {
-                return (null, 400, "Debe aceptar la solicitud primero antes de rechazarla o completarla.");
-            }
-        }
-
-        request.Status = normalizedStatus;
-        if (normalizedStatus == RequestStatuses.Completada)
-        {
-            request.CompletedAt = DateTime.UtcNow;
-            if (!request.Price.HasValue || request.Price.Value <= 0)
-            {
-                request.Price = request.Category switch
+                if (!request.WorkerId.HasValue)
                 {
-                    RequestCategories.Plomeria => 150m,
-                    RequestCategories.Electricidad => 180m,
-                    RequestCategories.Carpinteria => 200m,
-                    RequestCategories.Pintura => 220m,
-                    _ => 150m
-                };
-            }
-        }
-        await _db.SaveChangesAsync(ct);
+                    using var tx = await _db.Database.BeginTransactionAsync(ct);
+                    var affected = await _db.Requests
+                        .Where(r => r.Id == requestId && r.WorkerId == null && r.Status == RequestStatuses.Pendiente)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(r => r.WorkerId, worker.Id)
+                            .SetProperty(r => r.Status, RequestStatuses.Aceptada), ct);
 
-        return (request, 200, null);
+                    if (affected == 0)
+                    {
+                        await tx.RollbackAsync(ct);
+                        return (null, 409, "La solicitud ya fue tomada por otro trabajador.");
+                    }
+
+                    await tx.CommitAsync(ct);
+                    request.WorkerId = worker.Id;
+                    request.Worker = worker;
+                    request.Status = RequestStatuses.Aceptada;
+                    return (request, 200, null);
+                }
+
+                request.Status = RequestStatuses.Aceptada;
+                await _db.SaveChangesAsync(ct);
+                return (request, 200, null);
+            }
+
+            if (normalizedStatus == RequestStatuses.Rechazada)
+            {
+                if (!request.WorkerId.HasValue)
+                {
+                    return (null, 400, "No se puede rechazar una solicitud que no ha sido asignada.");
+                }
+
+                request.WorkerId = null;
+                request.Worker = null;
+                request.Status = RequestStatuses.Pendiente;
+                await _db.SaveChangesAsync(ct);
+                return (request, 200, null);
+            }
+
+            return (null, 400, "Transición no permitida para una solicitud en estado Pendiente.");
+        }
+
+        if (request.Status == RequestStatuses.Aceptada)
+        {
+            if (normalizedStatus == RequestStatuses.Completada)
+            {
+                request.Status = RequestStatuses.Completada;
+                request.CompletedAt = DateTime.UtcNow;
+                if (!request.Price.HasValue || request.Price.Value <= 0)
+                {
+                    request.Price = request.Category switch
+                    {
+                        RequestCategories.Plomeria => 150m,
+                        RequestCategories.Electricidad => 180m,
+                        RequestCategories.Carpinteria => 200m,
+                        RequestCategories.Pintura => 220m,
+                        _ => 150m
+                    };
+                }
+
+                await _db.SaveChangesAsync(ct);
+                return (request, 200, null);
+            }
+
+            if (normalizedStatus == RequestStatuses.Rechazada)
+            {
+                request.WorkerId = null;
+                request.Worker = null;
+                request.Status = RequestStatuses.Pendiente;
+                await _db.SaveChangesAsync(ct);
+                return (request, 200, null);
+            }
+
+            return (null, 400, "Transición no permitida para una solicitud en estado Aceptada.");
+        }
+
+        return (null, 400, "Transición de estado no válida.");
     }
 
     public Task<Worker?> GetWorkerByUserIdAsync(int userId, CancellationToken ct = default)
