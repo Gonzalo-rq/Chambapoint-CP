@@ -138,7 +138,7 @@ async function loadWorkers() {
   if (profession) params.set("profession", profession);
   const qs = params.toString();
   try {
-    const workers = await api(`/api/workers${qs ? `?${qs}` : ""}`, { auth: false });
+    const workers = await api(`/api/workers${qs ? `?${qs}` : ""}`);
     if (seq !== loadSeq) return;
     const list = workers || [];
     renderWorkers(list);

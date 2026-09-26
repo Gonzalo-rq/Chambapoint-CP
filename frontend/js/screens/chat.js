@@ -19,7 +19,7 @@ if (!withUserId) {
 
 const headerName = document.getElementById("peerName");
 const headerSub = document.getElementById("peerSub");
-const headerAvatar = document.getElementById("peerAvatar");
+let headerAvatar = document.getElementById("peerAvatar");
 const messagesEl = document.getElementById("messages");
 const form = document.getElementById("chatForm");
 const input = document.getElementById("chatInput");
@@ -63,7 +63,13 @@ async function loadPeerAndHistory() {
 function renderHeader(p) {
   headerName.textContent = p.name || `Usuario #${withUserId}`;
   headerSub.textContent = p.profession || "Chat en vivo";
-  headerAvatar.outerHTML = avatarHtml(p, "avatar-sm");
+  const temp = document.createElement("div");
+  temp.innerHTML = avatarHtml(p, "avatar-sm");
+  const next = temp.firstElementChild;
+  if (next && headerAvatar) {
+    headerAvatar.replaceWith(next);
+    headerAvatar = next;
+  }
 }
 
 function renderMessages(items) {
