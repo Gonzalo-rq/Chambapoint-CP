@@ -35,16 +35,17 @@ public class AppointmentsController : ControllerBase
 
         var role = GetUserRole() ?? Roles.Customer;
 
-        var (appointment, statusCode, error, affectedUserId) = await _appointmentService.ScheduleAsync(userId.Value, role, input, ct);
+        var (appointment, statusCode, error, affectedUserId) =
+            await _appointmentService.ScheduleAsync(userId.Value, role, input, ct);
 
         if (statusCode == 400) return BadRequest(new { message = error });
         if (statusCode == 403) return StatusCode(403, new { message = error });
         if (statusCode == 404) return NotFound(new { message = error });
+        if (statusCode == 409) return Conflict(new { message = error });
         if (appointment == null) return StatusCode(500, new { message = "Error interno agendando la cita." });
 
         var creatorName = User.FindFirstValue("name") ?? User.Identity?.Name;
 
-        // Notificar al usuario afectado vía RabbitMQ
         await _notifier.PublishAsync("appointment.scheduled", new
         {
             appointmentId = appointment.Id,
@@ -56,7 +57,6 @@ public class AppointmentsController : ControllerBase
             status = appointment.Status
         }, ct);
 
-        // Notificar en tiempo real vía SignalR
         if (affectedUserId.HasValue)
         {
             await _hub.Clients.Group($"user:{affectedUserId.Value}").SendAsync("newAppointment", new

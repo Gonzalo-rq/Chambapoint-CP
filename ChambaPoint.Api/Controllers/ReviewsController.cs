@@ -42,10 +42,22 @@ public class ReviewsController : ControllerBase
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var review = await _reviewService.CreateAsync(workerId, userId.Value, input, ct);
+        var (review, statusCode, error) = await _reviewService.CreateAsync(workerId, userId.Value, input, ct);
+        if (statusCode == 404)
+        {
+            return NotFound(new { message = error });
+        }
+        if (statusCode == 403)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = error });
+        }
+        if (statusCode == 409)
+        {
+            return Conflict(new { message = error });
+        }
         if (review is null)
         {
-            return NotFound(new { message = "Trabajador no encontrado." });
+            return BadRequest(new { message = error ?? "Error al crear la reseña." });
         }
 
         await _cache.RemoveAsync("worker:" + workerId, ct);
