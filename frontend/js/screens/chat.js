@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { requireAuth } from "../auth.js";
 import { toast, setLoading, showSkeleton } from "../ui.js";
-import { avatarHtml, escapeHtml, bottomNav } from "../components.js";
+import { avatarHtml, escapeHtml, bottomNav, refreshUnreadCount } from "../components.js";
 import { formatTime } from "../dates.js";
 import { connectHub, onHub, disconnectHub } from "../hub.js";
 
@@ -54,6 +54,7 @@ async function loadPeerAndHistory() {
     }
     renderHeader(peer);
     renderMessages(data.items || []);
+    refreshUnreadCount();
   } catch (err) {
     messagesEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     toast(err.message, "error");
@@ -74,7 +75,8 @@ function renderHeader(p) {
 
 function renderMessages(items) {
   if (!items.length) {
-    messagesEl.innerHTML = `<div class="empty-state"><h3>Sin mensajes</h3><p>Escribe el primero para empezar.</p></div>`;
+    messagesEl.innerHTML = '<div class="empty-state"><h3>Sin mensajes</h3>' +
+      '<p>Escribe el primero para empezar.</p></div>';
     return;
   }
   messagesEl.innerHTML = items
@@ -171,13 +173,13 @@ onHub("newMessage", (payload) => {
       sentAt: payload.sentAt,
       isRead: false,
     });
-    api("/api/messages/read", { method: "POST", body: { withUserId } }).catch(() => {});
+    api("/api/messages/read", { method: "POST", body: { withUserId } })
+      .then(() => refreshUnreadCount())
+      .catch(() => {});
   }
 });
 
-onHub("messagesRead", () => {
-  /* visual cue only */
-});
+onHub("messagesRead", () => {});
 
 loadPeerAndHistory().then(() => connectHub());
 window.addEventListener("beforeunload", () => disconnectHub());
