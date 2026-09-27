@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { requireAuth } from "../auth.js";
 import { toast, showSkeleton } from "../ui.js";
-import { avatarHtml, escapeHtml, bottomNav } from "../components.js";
+import { avatarHtml, escapeHtml, bottomNav, updateUnreadBadge } from "../components.js";
 import { parseApiDate } from "../dates.js";
 import { connectHub, onHub, disconnectHub } from "../hub.js";
 
@@ -25,6 +25,8 @@ async function load() {
     const data = await api("/api/messages");
     if (seq !== loadSeq) return;
     conversations = data.conversations || [];
+    const totalUnread = conversations.reduce((acc, c) => acc + (Number(c.unreadCount) || 0), 0);
+    updateUnreadBadge(totalUnread);
     render(conversations);
   } catch (err) {
     if (seq !== loadSeq) return;
@@ -49,7 +51,9 @@ function render(items) {
     if (q && items.length) {
       emptyEl.innerHTML = `<h3>Sin resultados</h3><p>No encontramos conversaciones con "${escapeHtml(q)}".</p>`;
     } else {
-      emptyEl.innerHTML = `<h3>Sin conversaciones</h3><p>Acuerda un servicio desde Solicitudes o el perfil del técnico.</p><p style="margin-top:12px"><a class="btn btn-primary" href="explore.html">Explorar</a></p>`;
+      emptyEl.innerHTML = '<h3>Sin conversaciones</h3>' +
+        '<p>Acuerda un servicio desde Solicitudes o el perfil del técnico.</p>' +
+        '<p style="margin-top:12px"><a class="btn btn-primary" href="explore.html">Explorar</a></p>';
     }
     return;
   }

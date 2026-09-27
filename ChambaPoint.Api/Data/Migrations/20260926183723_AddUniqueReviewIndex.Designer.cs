@@ -3,6 +3,7 @@ using System;
 using ChambaPoint.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ChambaPoint.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260926183723_AddUniqueReviewIndex")]
+    partial class AddUniqueReviewIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
@@ -25,9 +28,6 @@ namespace ChambaPoint.Api.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
-
-                    b.Property<int?>("CreatedById")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("CustomerId")
                         .HasColumnType("INTEGER");
@@ -52,8 +52,6 @@ namespace ChambaPoint.Api.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CreatedById");
 
                     b.HasIndex("CustomerId");
 
@@ -275,12 +273,6 @@ namespace ChambaPoint.Api.Data.Migrations
                     b.Property<int>("JobsCount")
                         .HasColumnType("INTEGER");
 
-                    b.Property<double?>("Latitude")
-                        .HasColumnType("REAL");
-
-                    b.Property<double?>("Longitude")
-                        .HasColumnType("REAL");
-
                     b.Property<string>("Profession")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -299,11 +291,6 @@ namespace ChambaPoint.Api.Data.Migrations
 
             modelBuilder.Entity("ChambaPoint.Api.Models.Appointment", b =>
                 {
-                    b.HasOne("ChambaPoint.Api.Models.User", "CreatedBy")
-                        .WithMany()
-                        .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("ChambaPoint.Api.Models.User", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
@@ -321,8 +308,6 @@ namespace ChambaPoint.Api.Data.Migrations
                         .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("CreatedBy");
 
                     b.Navigation("Customer");
 

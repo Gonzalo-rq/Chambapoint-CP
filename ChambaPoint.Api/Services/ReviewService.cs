@@ -6,8 +6,10 @@ namespace ChambaPoint.Api.Services;
 
 public interface IReviewService
 {
-    Task<Review?> CreateAsync(int workerId, int customerId, ReviewInput input, CancellationToken ct = default);
-    Task<(List<Review> Items, int Total)> ListByWorkerAsync(int workerId, int page, int pageSize, CancellationToken ct = default);
+    Task<(Review? Review, int StatusCode, string? Error)> CreateAsync(
+        int workerId, int customerId, ReviewInput input, CancellationToken ct = default);
+    Task<(List<Review> Items, int Total)> ListByWorkerAsync(
+        int workerId, int page, int pageSize, CancellationToken ct = default);
     Task<Worker?> GetWorkerByWorkerIdAsync(int workerId, CancellationToken ct = default);
 }
 
@@ -22,12 +24,32 @@ public class ReviewService : IReviewService
         _db = db;
     }
 
-    public async Task<Review?> CreateAsync(int workerId, int customerId, ReviewInput input, CancellationToken ct = default)
+    public async Task<(Review? Review, int StatusCode, string? Error)> CreateAsync(
+        int workerId, int customerId, ReviewInput input, CancellationToken ct = default)
     {
         var workerExists = await _db.Workers.AnyAsync(w => w.Id == workerId, ct);
         if (!workerExists)
         {
-            return null;
+            return (null, 404, "Trabajador no encontrado.");
+        }
+
+        var hasCompletedRequest = await _db.Requests.AnyAsync(r =>
+            r.CustomerId == customerId &&
+            r.WorkerId == workerId &&
+            r.Status == RequestStatuses.Completada, ct);
+
+        if (!hasCompletedRequest)
+        {
+            return (null, 403, "Solo clientes con solicitudes completadas con este trabajador pueden dejar reseña.");
+        }
+
+        var reviewExists = await _db.Reviews.AnyAsync(r =>
+            r.WorkerId == workerId &&
+            r.CustomerId == customerId, ct);
+
+        if (reviewExists)
+        {
+            return (null, 409, "Ya has dejado una reseña para este trabajador.");
         }
 
         var review = new Review
@@ -40,8 +62,16 @@ public class ReviewService : IReviewService
         };
 
         _db.Reviews.Add(review);
-        await _db.SaveChangesAsync(ct);
-        return review;
+
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            return (review, 201, null);
+        }
+        catch (DbUpdateException)
+        {
+            return (null, 409, "Ya has dejado una reseña para este trabajador.");
+        }
     }
 
     public async Task<(List<Review> Items, int Total)> ListByWorkerAsync(int workerId, int page, int pageSize, CancellationToken ct = default)

@@ -49,7 +49,11 @@ public class AppointmentService : IAppointmentService
             return (null, 400, "La descripción de la cita es requerida.", null);
         }
 
-        if (input.DateTime <= DateTime.UtcNow.AddMinutes(-5))
+        var appointmentTime = input.DateTime.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(input.DateTime, DateTimeKind.Utc)
+            : input.DateTime.ToUniversalTime();
+
+        if (appointmentTime <= DateTime.UtcNow.AddMinutes(-5))
         {
             return (null, 400, "La fecha de la cita no puede estar en el pasado.", null);
         }
@@ -108,13 +112,25 @@ public class AppointmentService : IAppointmentService
             return (null, 403, "Solo el cliente o el trabajador de la solicitud pueden agendar citas.", null);
         }
 
+        using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+        var hasConflict = await _db.Appointments.AnyAsync(a =>
+            a.WorkerId == workerId &&
+            a.DateTime == appointmentTime &&
+            (a.Status == AppointmentStatuses.Nueva || a.Status == AppointmentStatuses.Aceptada), ct);
+
+        if (hasConflict)
+        {
+            return (null, 409, "El trabajador ya tiene una cita agendada para esa fecha y hora.", null);
+        }
+
         var appointment = new Appointment
         {
             RequestId = request.Id,
             WorkerId = workerId,
             CustomerId = customerId,
             CreatedById = currentUserId,
-            DateTime = input.DateTime,
+            DateTime = appointmentTime,
             Description = input.Description.Trim(),
             Status = AppointmentStatuses.Nueva,
             CreatedAt = DateTime.UtcNow
@@ -122,13 +138,12 @@ public class AppointmentService : IAppointmentService
 
         _db.Appointments.Add(appointment);
         await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
 
-        // Cargar relaciones
         await _db.Entry(appointment).Reference(a => a.Customer).LoadAsync(ct);
         await _db.Entry(appointment).Reference(a => a.Worker).Query().Include(w => w.User).LoadAsync(ct);
         await _db.Entry(appointment).Reference(a => a.Request).LoadAsync(ct);
 
-        // El usuario afectado es la contraparte
         int affectedUserId = isCustomer ? worker.UserId : customerId;
 
         return (appointment, 201, null, affectedUserId);

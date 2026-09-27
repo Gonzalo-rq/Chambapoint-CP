@@ -115,8 +115,9 @@
 .chat-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
-  max-height: 100dvh;
+  height: 100dvh;
+  padding-bottom: var(--nav-h);
+  box-sizing: border-box;
 }
 
 .chat-header {

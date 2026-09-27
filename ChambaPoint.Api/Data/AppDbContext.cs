@@ -34,6 +34,8 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Review>(e =>
         {
+            e.HasIndex(r => new { r.WorkerId, r.CustomerId }).IsUnique();
+
             e.HasOne(r => r.Worker)
              .WithMany(w => w.Reviews)
              .HasForeignKey(r => r.WorkerId)
@@ -81,6 +83,11 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Appointment>(e =>
         {
+            e.Property(a => a.DateTime)
+             .HasConversion(
+                 v => v.ToUniversalTime(),
+                 v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
             e.HasOne(a => a.Request)
              .WithMany()
              .HasForeignKey(a => a.RequestId)

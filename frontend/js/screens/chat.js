@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { requireAuth } from "../auth.js";
 import { toast, setLoading, showSkeleton } from "../ui.js";
-import { avatarHtml, escapeHtml, bottomNav } from "../components.js";
+import { avatarHtml, escapeHtml, bottomNav, refreshUnreadCount } from "../components.js";
 import { formatTime } from "../dates.js";
 import { connectHub, onHub, disconnectHub } from "../hub.js";
 
@@ -19,7 +19,7 @@ if (!withUserId) {
 
 const headerName = document.getElementById("peerName");
 const headerSub = document.getElementById("peerSub");
-const headerAvatar = document.getElementById("peerAvatar");
+let headerAvatar = document.getElementById("peerAvatar");
 const messagesEl = document.getElementById("messages");
 const form = document.getElementById("chatForm");
 const input = document.getElementById("chatInput");
@@ -54,6 +54,7 @@ async function loadPeerAndHistory() {
     }
     renderHeader(peer);
     renderMessages(data.items || []);
+    refreshUnreadCount();
   } catch (err) {
     messagesEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     toast(err.message, "error");
@@ -63,12 +64,19 @@ async function loadPeerAndHistory() {
 function renderHeader(p) {
   headerName.textContent = p.name || `Usuario #${withUserId}`;
   headerSub.textContent = p.profession || "Chat en vivo";
-  headerAvatar.outerHTML = avatarHtml(p, "avatar-sm");
+  const temp = document.createElement("div");
+  temp.innerHTML = avatarHtml(p, "avatar-sm");
+  const next = temp.firstElementChild;
+  if (next && headerAvatar) {
+    headerAvatar.replaceWith(next);
+    headerAvatar = next;
+  }
 }
 
 function renderMessages(items) {
   if (!items.length) {
-    messagesEl.innerHTML = `<div class="empty-state"><h3>Sin mensajes</h3><p>Escribe el primero para empezar.</p></div>`;
+    messagesEl.innerHTML = '<div class="empty-state"><h3>Sin mensajes</h3>' +
+      '<p>Escribe el primero para empezar.</p></div>';
     return;
   }
   messagesEl.innerHTML = items
@@ -165,13 +173,13 @@ onHub("newMessage", (payload) => {
       sentAt: payload.sentAt,
       isRead: false,
     });
-    api("/api/messages/read", { method: "POST", body: { withUserId } }).catch(() => {});
+    api("/api/messages/read", { method: "POST", body: { withUserId } })
+      .then(() => refreshUnreadCount())
+      .catch(() => {});
   }
 });
 
-onHub("messagesRead", () => {
-  /* visual cue only */
-});
+onHub("messagesRead", () => {});
 
 loadPeerAndHistory().then(() => connectHub());
 window.addEventListener("beforeunload", () => disconnectHub());
