@@ -21,7 +21,9 @@ public static class DbInitializer
                 Experience = 0,
                 Distance = 0.0,
                 Jobs = 0,
-                About = ""
+                About = "",
+                Lat = (double?)null,
+                Lng = (double?)null
             },
             new
             {
@@ -34,7 +36,9 @@ public static class DbInitializer
                 Experience = 8,
                 Distance = 2.1,
                 Jobs = 45,
-                About = "Especialista en instalaciones eléctricas residenciales y comerciales."
+                About = "Especialista en instalaciones eléctricas residenciales y comerciales.",
+                Lat = (double?)-12.1187,
+                Lng = (double?)-77.0330
             },
             new
             {
@@ -47,7 +51,9 @@ public static class DbInitializer
                 Experience = 6,
                 Distance = 1.4,
                 Jobs = 38,
-                About = "Instalación y reparación de tuberías de agua y redes de gas."
+                About = "Instalación y reparación de tuberías de agua y redes de gas.",
+                Lat = (double?)-12.0967,
+                Lng = (double?)-77.0360
             },
             new
             {
@@ -60,7 +66,9 @@ public static class DbInitializer
                 Experience = 5,
                 Distance = 3.0,
                 Jobs = 29,
-                About = "Pintura decorativa para interiores y exteriores con acabados de calidad."
+                About = "Pintura decorativa para interiores y exteriores con acabados de calidad.",
+                Lat = (double?)-12.1088,
+                Lng = (double?)-77.0328
             },
             new
             {
@@ -73,7 +81,9 @@ public static class DbInitializer
                 Experience = 4,
                 Distance = 4.2,
                 Jobs = 18,
-                About = "Diagnóstico y mantenimiento de tableros eléctricos y cableado general."
+                About = "Diagnóstico y mantenimiento de tableros eléctricos y cableado general.",
+                Lat = (double?)-12.0433,
+                Lng = (double?)-77.0393
             },
             new
             {
@@ -86,7 +96,9 @@ public static class DbInitializer
                 Experience = 10,
                 Distance = 2.8,
                 Jobs = 52,
-                About = "Mueblería a medida, restauración de puertas, closets y acabados en madera."
+                About = "Mueblería a medida, restauración de puertas, closets y acabados en madera.",
+                Lat = (double?)-12.0633,
+                Lng = (double?)-77.0167
             }
         };
 
@@ -127,6 +139,8 @@ public static class DbInitializer
                     DistanceKm = item.Distance,
                     JobsCount = item.Jobs,
                     About = item.About,
+                    Latitude = item.Lat,
+                    Longitude = item.Lng,
                     Certifications = new List<string> { "Certificación Técnica ChambaPoint" },
                     Gallery = new List<string>(),
                     IsOnline = true,
@@ -135,7 +149,20 @@ public static class DbInitializer
                 db.Workers.Add(worker);
                 db.SaveChanges();
             }
+            else if (item.IsWorker && user.WorkerProfile != null && user.WorkerProfile.Latitude == null)
+            {
+                user.WorkerProfile.Latitude = item.Lat;
+                user.WorkerProfile.Longitude = item.Lng;
+                db.SaveChanges();
+            }
         }
+
+        foreach (var w in db.Workers.Where(w => w.Latitude == null || w.Longitude == null))
+        {
+            w.Latitude = -12.0555;
+            w.Longitude = -77.0450;
+        }
+        db.SaveChanges();
 
         foreach (var u in db.Users.ToList())
         {
