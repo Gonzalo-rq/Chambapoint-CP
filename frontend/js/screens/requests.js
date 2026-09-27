@@ -38,13 +38,14 @@ onHub("newRequest", () => load());
 onHub("requestStatusChanged", () => load());
 onHub("newAppointment", () => load());
 onHub("appointmentStatusChanged", () => load());
+onHub("resync", () => load({ silent: true }));
 connectHub().catch(() => null);
 window.addEventListener("beforeunload", () => disconnectHub());
 
-async function load() {
+async function load({ silent = false } = {}) {
   const seq = ++loadSeq;
   const filter = statusFilter;
-  showSkeleton(listEl, 3);
+  if (!silent) showSkeleton(listEl, 3);
   try {
     const data = await api(`/api/requests?status=${filter}&pageSize=20`);
     if (seq !== loadSeq) return;
@@ -53,6 +54,10 @@ async function load() {
     await loadAppointments(seq, filter);
   } catch (err) {
     if (seq !== loadSeq) return;
+    if (silent) {
+      console.error("resync de solicitudes falló:", err);
+      return;
+    }
     listEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     toast(err.message, "error");
   }

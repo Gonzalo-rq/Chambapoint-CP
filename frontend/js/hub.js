@@ -2,10 +2,26 @@ import { HUB_URL, STORAGE_KEYS } from "./config.js";
 import { getToken, getUser } from "./api.js";
 
 let connection = null;
+let pendingConnection = null;
 let handlers = {};
+let reconnectTimer = null;
+let closedByApp = false;
+
+const RECONNECT_DELAY_MS = 15000;
 
 export async function connectHub() {
   if (connection) return connection;
+  if (pendingConnection) return pendingConnection;
+
+  pendingConnection = openConnection();
+  try {
+    return await pendingConnection;
+  } finally {
+    pendingConnection = null;
+  }
+}
+
+async function openConnection() {
   const user = getUser();
   const token = getToken();
   if (!user || !token) return null;
@@ -28,29 +44,45 @@ export async function connectHub() {
 
   const events = ["newMessage", "messagesRead", "newRequest", "requestStatusChanged", "newAppointment", "appointmentStatusChanged", "newReview"];
   for (const ev of events) {
-    connection.on(ev, (payload) => {
-      (handlers[ev] || []).forEach((fn) => {
-        try {
-          fn(payload);
-        } catch {
-          /* ignore handler errors */
-        }
-      });
-    });
+    connection.on(ev, (payload) => dispatch(ev, payload));
   }
 
   connection.onreconnected(() => {
-    joinUserGroup(user);
+    joinUserGroup(user).catch(() => null);
+  });
+
+  connection.onclose(() => {
+    connection = null;
+    if (closedByApp) {
+      closedByApp = false;
+      return;
+    }
+    scheduleReconnect();
   });
 
   try {
     await connection.start();
     await joinUserGroup(user);
   } catch {
+    try {
+      await connection.stop();
+    } catch {
+      /* ignore */
+    }
     connection = null;
     return null;
   }
   return connection;
+}
+
+function dispatch(event, payload) {
+  (handlers[event] || []).forEach((fn) => {
+    try {
+      fn(payload);
+    } catch {
+      /* ignore handler errors */
+    }
+  });
 }
 
 async function joinUserGroup(user) {
@@ -58,7 +90,23 @@ async function joinUserGroup(user) {
   const userId = user.id ?? user.userId ?? user.Id;
   if (userId != null) {
     await connection.invoke("JoinUserGroup", Number(userId));
+    dispatch("resync");
   }
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (connection) return;
+    if (!getUser() || !getToken()) return;
+    connectHub().then(
+      (conn) => {
+        if (!conn) scheduleReconnect();
+      },
+      () => scheduleReconnect()
+    );
+  }, RECONNECT_DELAY_MS);
 }
 
 export function onHub(event, fn) {
@@ -68,12 +116,18 @@ export function onHub(event, fn) {
 
 export async function disconnectHub() {
   if (!connection) return;
+  closedByApp = true;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   try {
     await connection.stop();
   } catch {
     /* ignore */
   }
   connection = null;
+  closedByApp = false;
   handlers = {};
 }
 

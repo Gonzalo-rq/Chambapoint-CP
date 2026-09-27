@@ -18,9 +18,9 @@ const emptyEl = document.getElementById("convEmpty");
 let conversations = [];
 let loadSeq = 0;
 
-async function load() {
+async function load({ silent = false } = {}) {
   const seq = ++loadSeq;
-  showSkeleton(listEl, 4);
+  if (!silent) showSkeleton(listEl, 4);
   try {
     const data = await api("/api/messages");
     if (seq !== loadSeq) return;
@@ -30,6 +30,10 @@ async function load() {
     render(conversations);
   } catch (err) {
     if (seq !== loadSeq) return;
+    if (silent) {
+      console.error("resync de conversaciones falló:", err);
+      return;
+    }
     listEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     toast(err.message, "error");
   }
@@ -98,5 +102,11 @@ onHub("newMessage", () => {
   load();
 });
 
-connectHub().catch(() => null).then(() => load());
+onHub("resync", () => {
+  load({ silent: true });
+});
+
+connectHub().catch(() => null).then((conn) => {
+  if (!conn) load();
+});
 window.addEventListener("beforeunload", () => disconnectHub());
