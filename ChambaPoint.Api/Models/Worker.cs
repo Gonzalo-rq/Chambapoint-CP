@@ -20,6 +20,10 @@ public class Worker
 
     public int JobsCount { get; set; }
 
+    public double? Latitude { get; set; }
+
+    public double? Longitude { get; set; }
+
     [MaxLength(3000)]
     public string About { get; set; } = string.Empty;
 

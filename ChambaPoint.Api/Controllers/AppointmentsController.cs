@@ -207,6 +207,7 @@ public class AppointmentsController : ControllerBase
         a.DateTime,
         a.Description,
         a.Status,
+        a.CreatedById,
         a.CreatedAt
     };
 

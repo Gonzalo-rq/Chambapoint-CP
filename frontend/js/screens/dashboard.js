@@ -106,10 +106,14 @@ function renderPending(items) {
       </div>
       ${a.customerName ? `<p class="appt-customer">Cliente: <strong>${escapeHtml(a.customerName)}</strong></p>` : ""}
       ${a.description ? `<p class="appt-desc">${escapeHtml(a.description)}</p>` : ""}
-      <div class="appt-actions">
-        <button type="button" class="btn btn-primary btn-sm" data-appt-action="Aceptada">Aceptar</button>
-        <button type="button" class="btn btn-danger btn-sm" data-appt-action="Rechazada">Rechazar</button>
-      </div>
+      ${
+        a.canAct === false
+          ? `<p class="text-muted">Agendaste esta cita; espera la confirmación de la contraparte.</p>`
+          : `<div class="appt-actions">
+              <button type="button" class="btn btn-primary btn-sm" data-appt-action="Aceptada">Aceptar</button>
+              <button type="button" class="btn btn-danger btn-sm" data-appt-action="Rechazada">Rechazar</button>
+            </div>`
+      }
     </article>`
     )
     .join("");

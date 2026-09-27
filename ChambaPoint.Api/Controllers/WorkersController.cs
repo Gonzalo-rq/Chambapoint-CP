@@ -139,6 +139,9 @@ public class WorkersController : ControllerBase
             .Select(g => new { Average = (double?)g.Average(r => r.Rating), Count = g.Count() })
             .FirstOrDefaultAsync(ct);
 
+        var jobsCompleted = await _db.Requests
+            .CountAsync(r => r.WorkerId == worker.Id && r.Status == RequestStatuses.Completada, ct);
+
         var reviews = includeReviews
             ? await _db.Reviews
                 .Include(r => r.Customer)
@@ -158,7 +161,9 @@ public class WorkersController : ControllerBase
             worker.Profession,
             worker.ExperienceYears,
             worker.DistanceKm,
-            worker.JobsCount,
+            jobsCount = jobsCompleted,
+            worker.Latitude,
+            worker.Longitude,
             worker.About,
             worker.Certifications,
             worker.Gallery,
@@ -193,11 +198,6 @@ public class WorkersController : ControllerBase
         if (input.DistanceKm < 0)
         {
             return "DistanceKm no puede ser negativo.";
-        }
-
-        if (input.JobsCount < 0)
-        {
-            return "JobsCount no puede ser negativo.";
         }
 
         return null;

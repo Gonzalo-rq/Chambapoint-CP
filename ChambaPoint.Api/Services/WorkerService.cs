@@ -17,7 +17,6 @@ public record WorkerProfileInput(
     string Profession,
     int ExperienceYears,
     double DistanceKm,
-    int JobsCount,
     string About,
     List<string>? Certifications,
     List<string>? Gallery);
@@ -53,7 +52,6 @@ public class WorkerService : IWorkerService
             Profession = input.Profession,
             ExperienceYears = input.ExperienceYears,
             DistanceKm = input.DistanceKm,
-            JobsCount = input.JobsCount,
             About = input.About ?? string.Empty,
             Certifications = input.Certifications ?? new List<string>(),
             Gallery = input.Gallery ?? new List<string>()
@@ -69,7 +67,6 @@ public class WorkerService : IWorkerService
         worker.Profession = input.Profession;
         worker.ExperienceYears = input.ExperienceYears;
         worker.DistanceKm = input.DistanceKm;
-        worker.JobsCount = input.JobsCount;
         worker.About = input.About ?? string.Empty;
         worker.Certifications = input.Certifications ?? worker.Certifications;
         worker.Gallery = input.Gallery ?? worker.Gallery;

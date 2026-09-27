@@ -32,7 +32,6 @@ function pickProfile(raw) {
     about: raw.about ?? raw.About ?? "",
     experienceYears: raw.experienceYears ?? raw.ExperienceYears ?? 0,
     distanceKm: raw.distanceKm ?? raw.DistanceKm ?? 0,
-    jobsCount: raw.jobsCount ?? raw.JobsCount ?? 0,
     certifications: normalizeList(raw.certifications ?? raw.Certifications),
     gallery: normalizeList(raw.gallery ?? raw.Gallery),
   };
@@ -44,7 +43,6 @@ function fill(p) {
   aboutCount.textContent = String(aboutEl.value.length);
   document.getElementById("experienceYears").value = p.experienceYears;
   document.getElementById("distanceKm").value = p.distanceKm;
-  document.getElementById("jobsCount").value = p.jobsCount;
   document.getElementById("certifications").value = p.certifications.join("\n");
 }
 
@@ -64,7 +62,6 @@ async function load() {
         about: "",
         experienceYears: 0,
         distanceKm: 0,
-        jobsCount: 0,
         certifications: [],
         gallery: [],
       };
@@ -83,7 +80,6 @@ async function load() {
 function validate() {
   const exp = document.getElementById("experienceYears");
   const dist = document.getElementById("distanceKm");
-  const jobs = document.getElementById("jobsCount");
   let ok = true;
 
   if (!aboutEl.value.trim()) {
@@ -109,14 +105,6 @@ function validate() {
     fieldError(dist, "");
   }
 
-  const jobsVal = Number(jobs.value);
-  if (!Number.isFinite(jobsVal) || jobsVal < 0) {
-    fieldError(jobs, "No puede ser negativo.");
-    ok = false;
-  } else {
-    fieldError(jobs, "");
-  }
-
   return ok;
 }
 
@@ -138,7 +126,6 @@ form.addEventListener("submit", async (e) => {
     about: aboutEl.value.trim(),
     experienceYears: Number(document.getElementById("experienceYears").value),
     distanceKm: Number(document.getElementById("distanceKm").value),
-    jobsCount: Number(document.getElementById("jobsCount").value),
     certifications: certs,
     gallery: base?.gallery || [],
   };

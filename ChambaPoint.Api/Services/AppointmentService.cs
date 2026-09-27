@@ -113,6 +113,7 @@ public class AppointmentService : IAppointmentService
             RequestId = request.Id,
             WorkerId = workerId,
             CustomerId = customerId,
+            CreatedById = currentUserId,
             DateTime = input.DateTime,
             Description = input.Description.Trim(),
             Status = AppointmentStatuses.Nueva,
@@ -170,6 +171,13 @@ public class AppointmentService : IAppointmentService
             return (null, 403, "No tienes permiso para modificar esta cita.", null);
         }
 
+        if (appointment.CreatedById == currentUserId &&
+            (normalizedStatus == AppointmentStatuses.Aceptada ||
+             normalizedStatus == AppointmentStatuses.Rechazada))
+        {
+            return (null, 403, "No puedes aceptar ni rechazar una cita que agendaste tú mismo.", null);
+        }
+
         appointment.Status = normalizedStatus;
 
         // Si la cita se completa y la solicitud asociada estaba aceptada, opcionalmente actualizar la solicitud
@@ -178,6 +186,7 @@ public class AppointmentService : IAppointmentService
             if (appointment.Request.Status == RequestStatuses.Aceptada)
             {
                 appointment.Request.Status = RequestStatuses.Completada;
+                appointment.Request.CompletedAt = DateTime.UtcNow;
             }
         }
 

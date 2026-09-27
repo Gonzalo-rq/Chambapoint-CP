@@ -114,6 +114,8 @@ public class DashboardService : IDashboardService
             formattedDate = a.DateTime.ToString("dd/MM/yyyy HH:mm", culture),
             description = a.Description,
             status = a.Status,
+            createdById = a.CreatedById,
+            canAct = a.CreatedById != userId,
             actions = new
             {
                 accept = new
@@ -171,7 +173,7 @@ public class DashboardService : IDashboardService
                 name = worker.User?.Name,
                 worker.Profession,
                 worker.ExperienceYears,
-                worker.JobsCount,
+                jobsCount = completedRequestsCount,
                 avatarUrl = worker.User?.AvatarUrl,
                 worker.IsOnline
             },

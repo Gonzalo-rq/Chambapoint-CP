@@ -71,9 +71,9 @@ function placeWorkerMarkers(workers) {
   currentWorkers = workers || [];
   const bounds = [];
   currentWorkers.forEach((w, i) => {
-    const id = Number(w.id) || i;
-    const lat = LIMA[0] + (((id * 37) % 7) - 3) * 0.01;
-    const lng = LIMA[1] + (((id * 53) % 7) - 3) * 0.01;
+    const lat = Number(w.latitude ?? w.Latitude);
+    const lng = Number(w.longitude ?? w.Longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     const rating = Number(w.ratingAverage) || 0;
     const marker = L.marker([lat, lng], { icon: workerIcon(w.name) }).addTo(markersLayer);
     bounds.push([lat, lng]);
@@ -91,8 +91,12 @@ function placeWorkerMarkers(workers) {
       });
     });
   });
-  if (bounds.length) {
-    map.setView(LIMA, 13);
+  if (bounds.length === 1) {
+    map.setView(bounds[0], 14);
+  } else if (bounds.length > 1) {
+    map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+  } else {
+    map.setView(LIMA, 12);
   }
 }
 
