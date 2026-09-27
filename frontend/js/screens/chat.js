@@ -31,8 +31,10 @@ let page = 1;
 const pageSize = 50;
 let loadingMore = false;
 
-async function loadPeerAndHistory() {
-  showSkeleton(messagesEl, 4);
+async function loadPeerAndHistory({ silent = false } = {}) {
+  const prevScroll = messagesEl.scrollTop;
+  const wasAtBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 40;
+  if (!silent) showSkeleton(messagesEl, 4);
   try {
     const probe = await api(`/api/messages?withUserId=${withUserId}&page=1&pageSize=${pageSize}`);
     const total = Number(probe.total) || 0;
@@ -54,8 +56,13 @@ async function loadPeerAndHistory() {
     }
     renderHeader(peer);
     renderMessages(data.items || []);
+    if (silent && !wasAtBottom) messagesEl.scrollTop = prevScroll;
     refreshUnreadCount();
   } catch (err) {
+    if (silent) {
+      console.error("resync de historial falló:", err);
+      return;
+    }
     messagesEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     toast(err.message, "error");
   }
@@ -180,6 +187,10 @@ onHub("newMessage", (payload) => {
 });
 
 onHub("messagesRead", () => {});
+
+onHub("resync", () => {
+  loadPeerAndHistory({ silent: true });
+});
 
 loadPeerAndHistory().then(() => connectHub());
 window.addEventListener("beforeunload", () => disconnectHub());

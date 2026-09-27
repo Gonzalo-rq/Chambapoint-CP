@@ -23,7 +23,7 @@ showSkeleton(activityEl, 3);
 
 let loadSeq = 0;
 
-async function load() {
+async function load({ silent = false } = {}) {
   const seq = ++loadSeq;
   try {
     const d = await api("/api/dashboard/worker");
@@ -35,6 +35,10 @@ async function load() {
     renderActivity(d.recentActivity || []);
   } catch (err) {
     if (seq !== loadSeq) return;
+    if (silent) {
+      console.error("resync del dashboard falló:", err);
+      return;
+    }
     pendingEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     activityEl.innerHTML = "";
     toast(err.message, "error");
@@ -163,6 +167,9 @@ function renderActivity(items) {
 onHub("newRequest", () => load());
 onHub("appointmentStatusChanged", () => load());
 onHub("newAppointment", () => load());
+onHub("resync", () => load({ silent: true }));
 
-connectHub().catch(() => null).then(() => load());
+connectHub().catch(() => null).then((conn) => {
+  if (!conn) load();
+});
 window.addEventListener("beforeunload", () => disconnectHub());
