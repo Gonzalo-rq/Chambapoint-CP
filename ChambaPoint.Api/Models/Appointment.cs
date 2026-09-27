@@ -38,6 +38,10 @@ public class Appointment
 
     public User Customer { get; set; } = null!;
 
+    public int? CreatedById { get; set; }
+
+    public User? CreatedBy { get; set; }
+
     [Required]
     public DateTime DateTime { get; set; }
 

@@ -103,6 +103,11 @@ public class AppDbContext : DbContext
              .HasForeignKey(a => a.CustomerId)
              .OnDelete(DeleteBehavior.Cascade);
 
+            e.HasOne(a => a.CreatedBy)
+             .WithMany()
+             .HasForeignKey(a => a.CreatedById)
+             .OnDelete(DeleteBehavior.Restrict);
+
             e.HasIndex(a => a.WorkerId);
             e.HasIndex(a => a.CustomerId);
             e.HasIndex(a => a.DateTime);

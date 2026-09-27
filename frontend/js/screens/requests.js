@@ -3,6 +3,7 @@ import { requireAuth } from "../auth.js";
 import { toast, setLoading, showSkeleton, fieldError } from "../ui.js";
 import { avatarHtml, escapeHtml, statusBadge, bottomNav } from "../components.js";
 import { formatDate, formatRangeDate } from "../dates.js";
+import { connectHub, onHub, disconnectHub } from "../hub.js";
 
 const user = requireAuth();
 if (!user) throw new Error("Sin sesión");
@@ -32,6 +33,13 @@ tabs.forEach((tab) => {
     load();
   });
 });
+
+onHub("newRequest", () => load());
+onHub("requestStatusChanged", () => load());
+onHub("newAppointment", () => load());
+onHub("appointmentStatusChanged", () => load());
+connectHub().catch(() => null);
+window.addEventListener("beforeunload", () => disconnectHub());
 
 async function load() {
   const seq = ++loadSeq;
@@ -164,7 +172,8 @@ async function loadAppointments(seq = loadSeq, filter = statusFilter) {
 }
 
 function appointmentCard(a) {
-  const showActions = a.status === "Nueva";
+  const scheduledByMe = a.createdById != null && Number(a.createdById) === Number(user.id);
+  const showActions = a.status === "Nueva" && !scheduledByMe;
   return `
     <article class="appointment-card">
       <div class="appt-label">📅 Cita agendada ${statusBadge(a.status)}</div>
@@ -177,7 +186,9 @@ function appointmentCard(a) {
               <button type="button" class="btn btn-primary btn-sm" data-appt-action="Aceptada" data-appt-id="${a.id}">Aceptar</button>
               <button type="button" class="btn btn-danger btn-sm" data-appt-action="Rechazada" data-appt-id="${a.id}">Rechazar</button>
             </div>`
-          : ""
+          : a.status === "Nueva"
+            ? `<p class="desc">Esperando confirmación de la contraparte.</p>`
+            : ""
       }
     </article>`;
 }
