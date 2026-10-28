@@ -42,7 +42,18 @@ builder.Services.AddScoped<IRequestService, RequestService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+// ML.NET Services
+builder.Services.Configure<SentimentOptions>(builder.Configuration.GetSection(SentimentOptions.SectionName));
+builder.Services.AddSingleton<ISentimentAnalysisService, SentimentAnalysisService>();
+
+builder.Services.Configure<RecommendationOptions>(builder.Configuration.GetSection(RecommendationOptions.SectionName));
+builder.Services.AddSingleton<IRecommendationService, RecommendationService>();
+
+// RabbitMQ Notifier y Consumidor
 builder.Services.AddSingleton<IRequestNotifier, RabbitMqRequestNotifier>();
+builder.Services.AddHostedService<NotificationConsumerService>();
+
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -129,6 +140,13 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
     DbInitializer.Seed(db, hasher);
+
+    // Inicializar modelos ML
+    var sentimentService = scope.ServiceProvider.GetRequiredService<ISentimentAnalysisService>();
+    await sentimentService.InicializarAsync();
+
+    var recommendationService = scope.ServiceProvider.GetRequiredService<IRecommendationService>();
+    await recommendationService.InicializarAsync();
 }
 
 app.MapOpenApi();

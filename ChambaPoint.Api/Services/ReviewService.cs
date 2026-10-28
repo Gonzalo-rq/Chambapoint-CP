@@ -18,10 +18,12 @@ public record ReviewInput(int Rating, string Text, List<string>? Photos);
 public class ReviewService : IReviewService
 {
     private readonly AppDbContext _db;
+    private readonly ISentimentAnalysisService _sentimentService;
 
-    public ReviewService(AppDbContext db)
+    public ReviewService(AppDbContext db, ISentimentAnalysisService sentimentService)
     {
         _db = db;
+        _sentimentService = sentimentService;
     }
 
     public async Task<(Review? Review, int StatusCode, string? Error)> CreateAsync(
@@ -60,6 +62,16 @@ public class ReviewService : IReviewService
             Text = input.Text ?? string.Empty,
             Photos = input.Photos ?? new List<string>()
         };
+
+        if (!string.IsNullOrWhiteSpace(review.Text))
+        {
+            var analisis = await _sentimentService.AnalizarAsync(review.Text, ct);
+            if (analisis.Analizado)
+            {
+                review.Sentiment = analisis.Etiqueta;
+                review.SentimentProbability = analisis.Probabilidad;
+            }
+        }
 
         _db.Reviews.Add(review);
 

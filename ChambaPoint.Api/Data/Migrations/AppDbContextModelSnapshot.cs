@@ -107,6 +107,28 @@ namespace ChambaPoint.Api.Data.Migrations
                     b.ToTable("Messages");
                 });
 
+            modelBuilder.Entity("ChambaPoint.Api.Models.NotificationAudit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("NotificationAudits");
+                });
+
             modelBuilder.Entity("ChambaPoint.Api.Models.Request", b =>
                 {
                     b.Property<int>("Id")
@@ -182,6 +204,12 @@ namespace ChambaPoint.Api.Data.Migrations
 
                     b.Property<int>("Rating")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Sentiment")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("SentimentProbability")
+                        .HasColumnType("REAL");
 
                     b.Property<string>("Text")
                         .IsRequired()

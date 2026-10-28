@@ -15,12 +15,18 @@ public class WorkersController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IWorkerService _workerService;
     private readonly ICacheService _cache;
+    private readonly IRecommendationService _recommendationService;
 
-    public WorkersController(AppDbContext db, IWorkerService workerService, ICacheService cache)
+    public WorkersController(
+        AppDbContext db,
+        IWorkerService workerService,
+        ICacheService cache,
+        IRecommendationService recommendationService)
     {
         _db = db;
         _workerService = workerService;
         _cache = cache;
+        _recommendationService = recommendationService;
     }
 
     [HttpGet]
@@ -32,6 +38,61 @@ public class WorkersController : ControllerBase
         foreach (var worker in workers)
         {
             dtos.Add(await BuildWorkerDtoAsync(worker, includeReviews: false, ct));
+        }
+
+        return Ok(dtos);
+    }
+
+    [HttpGet("recommended")]
+    [Authorize]
+    public async Task<IActionResult> GetRecommended(CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var allWorkers = await _db.Workers.Select(w => w.Id).ToListAsync(ct);
+        var recomendados = await _recommendationService.RecomendarAsync(userId.Value.ToString(), allWorkers, topK: 5, ct);
+
+        var workerIds = recomendados.Select(r => r.ProductId).ToList();
+        var workers = await _db.Workers
+            .Include(w => w.User)
+            .Where(w => workerIds.Contains(w.Id))
+            .ToListAsync(ct);
+
+        var dtos = new List<object>();
+        foreach (var rec in recomendados)
+        {
+            var worker = workers.FirstOrDefault(w => w.Id == rec.ProductId);
+            if (worker != null)
+            {
+                var dto = await BuildWorkerDtoAsync(worker, includeReviews: false, ct);
+                dtos.Add(new
+                {
+                    worker = dto,
+                    score = Math.Round(rec.Score, 2),
+                    esPopular = rec.DeFrio
+                });
+            }
+        }
+
+        // Si el usuario no tiene historial o no hubo matches, completar con los mejor valorados
+        if (dtos.Count == 0)
+        {
+            var topWorkers = await _db.Workers
+                .Include(w => w.User)
+                .OrderByDescending(w => w.JobsCount)
+                .Take(5)
+                .ToListAsync(ct);
+
+            foreach (var w in topWorkers)
+            {
+                dtos.Add(new
+                {
+                    worker = await BuildWorkerDtoAsync(w, includeReviews: false, ct),
+                    score = 5.0,
+                    esPopular = true
+                });
+            }
         }
 
         return Ok(dtos);
@@ -147,7 +208,15 @@ public class WorkersController : ControllerBase
                 .Include(r => r.Customer)
                 .Where(r => r.WorkerId == worker.Id)
                 .OrderByDescending(r => r.CreatedAt)
-                .Select(r => new ReviewDto(r.Id, r.Rating, r.Text, r.Photos, r.CreatedAt, r.Customer != null ? r.Customer.Name : null))
+                .Select(r => new ReviewDto(
+                    r.Id,
+                    r.Rating,
+                    r.Text,
+                    r.Photos,
+                    r.Sentiment,
+                    r.SentimentProbability,
+                    r.CreatedAt,
+                    r.Customer != null ? r.Customer.Name : null))
                 .ToListAsync(ct)
             : new List<ReviewDto>();
 
@@ -173,7 +242,15 @@ public class WorkersController : ControllerBase
         };
     }
 
-    public record ReviewDto(int Id, int Rating, string Text, List<string> Photos, DateTime CreatedAt, string? Author);
+    public record ReviewDto(
+        int Id,
+        int Rating,
+        string Text,
+        List<string> Photos,
+        string? Sentiment,
+        double? SentimentProbability,
+        DateTime CreatedAt,
+        string? Author);
 
     private int? GetUserId()
     {
