@@ -65,7 +65,15 @@ public class RabbitMqRequestNotifier : IRequestNotifier, IDisposable, IAsyncDisp
     private async Task<IChannel> EnsureChannelAsync(CancellationToken ct)
     {
         _connection ??= await ConnectAsync(ct);
-        return await _connection.CreateChannelAsync(cancellationToken: ct);
+        var channel = await _connection.CreateChannelAsync(cancellationToken: ct);
+        await channel.QueueDeclareAsync(
+            queue: "chambapoint.notifications",
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null,
+            cancellationToken: ct);
+        return channel;
     }
 
     private async Task<IConnection> ConnectAsync(CancellationToken ct)
