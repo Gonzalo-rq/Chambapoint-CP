@@ -24,5 +24,9 @@ public class Review
 
     public List<string> Photos { get; set; } = new();
 
+    public string? Sentiment { get; set; }
+
+    public double? SentimentProbability { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

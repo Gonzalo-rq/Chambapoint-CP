@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Request> Requests => Set<Request>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<NotificationAudit> NotificationAudits => Set<NotificationAudit>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -67,7 +67,8 @@ public class ReviewsController : ControllerBase
             reviewId = review.Id,
             workerId,
             customerId = userId.Value,
-            rating = input.Rating
+            rating = input.Rating,
+            sentiment = review.Sentiment
         }, ct);
 
         var worker = await _reviewService.GetWorkerByWorkerIdAsync(workerId, ct);
@@ -77,6 +78,7 @@ public class ReviewsController : ControllerBase
             {
                 reviewId = review.Id,
                 rating = input.Rating,
+                sentiment = review.Sentiment,
                 author = User.FindFirstValue("name") ?? User.Identity?.Name
             }, ct);
         }
@@ -87,6 +89,8 @@ public class ReviewsController : ControllerBase
             review.Rating,
             review.Text,
             review.Photos,
+            review.Sentiment,
+            review.SentimentProbability,
             review.CreatedAt,
             author = User.FindFirstValue("name") ?? User.Identity?.Name
         });
@@ -108,6 +112,8 @@ public class ReviewsController : ControllerBase
                 r.Rating,
                 r.Text,
                 r.Photos,
+                r.Sentiment,
+                r.SentimentProbability,
                 r.CreatedAt,
                 author = r.Customer != null ? r.Customer.Name : null
             }),
