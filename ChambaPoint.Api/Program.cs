@@ -4,6 +4,8 @@ using ChambaPoint.Api.Data;
 using ChambaPoint.Api.Hubs;
 using ChambaPoint.Api.Models;
 using ChambaPoint.Api.Services;
+using ChambaPoint.Api.Services.Agent;
+using ChambaPoint.Api.Services.External;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -45,6 +47,18 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddSingleton<IRequestNotifier, RabbitMqRequestNotifier>();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+
+// Inyecciones para el Asistente IA
+builder.Services.AddScoped<TrabajadoresPlugin>();
+builder.Services.AddScoped<IChambaAssistantService, ChambaAssistantService>();
+
+// Inyección del cliente HTTP para la API externa
+builder.Services.AddHttpClient<ICurrencyService, CurrencyService>(client =>
+{
+    var baseUrl = builder.Configuration["TipoCambio:BaseUrl"] ?? "https://api.frankfurter.dev/";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
