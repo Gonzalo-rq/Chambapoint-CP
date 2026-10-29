@@ -490,3 +490,41 @@
     height: 100%;
   }
 }
+
+.recommended-section {
+  margin-bottom: var(--space-4);
+}
+
+.recommended-hint {
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  font-weight: 600;
+}
+
+.recommended-strip {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.recommended-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.recommended-strip::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-pill);
+}
+
+.recommended-strip .worker-card {
+  flex: 0 0 74%;
+  max-width: 260px;
+  margin-bottom: 0;
+  scroll-snap-align: start;
+}

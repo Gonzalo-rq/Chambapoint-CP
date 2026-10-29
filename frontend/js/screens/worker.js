@@ -226,13 +226,28 @@ function renderTab() {
   document.getElementById("reviewForm")?.addEventListener("submit", submitReview);
 }
 
+function sentimentBadge(r) {
+  const label = String(r.sentiment || "").toLowerCase();
+  if (!label || r.sentimentProbability == null) return "";
+  const positive = ["positivo", "positive", "pos", "buena", "bueno"].includes(label);
+  const negative = ["negativo", "negative", "neg", "mala", "malo"].includes(label);
+  const cls = positive ? "positive" : negative ? "negative" : "neutral";
+  const icon = positive ? "😊" : negative ? "😞" : "😐";
+  const prob = Number(r.sentimentProbability);
+  const suffix = Number.isFinite(prob) ? ` ${Math.round(prob * 100)}%` : "";
+  return `<span class="sentiment-badge ${cls}" title="Análisis de sentimiento">${icon} ${escapeHtml(r.sentiment)}${suffix}</span>`;
+}
+
 function reviewItem(r) {
   const rating = Number(r.rating) || 0;
   return `
     <article class="review-item">
       <div class="review-head">
         <strong>${escapeHtml(r.author || "Cliente")}</strong>
-        <span class="review-stars">${"★".repeat(rating)}${"☆".repeat(Math.max(0, 5 - rating))}</span>
+        <span class="review-head-right">
+          ${sentimentBadge(r)}
+          <span class="review-stars">${"★".repeat(rating)}${"☆".repeat(Math.max(0, 5 - rating))}</span>
+        </span>
       </div>
       <p>${escapeHtml(r.text)}</p>
       ${

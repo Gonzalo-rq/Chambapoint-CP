@@ -1,5 +1,6 @@
 import { getToken, getUser, api } from "./api.js";
 import { connectHub, onHub } from "./hub.js";
+import { mountSharedWidgets } from "./assistant.js";
 
 export function initials(name = "") {
   return name
@@ -199,6 +200,7 @@ export function bottomNav(active = "explore", role = null) {
   ];
 
   setTimeout(() => initNavNotifications(), 0);
+  setTimeout(() => mountSharedWidgets(), 0);
 
   const badgeIcon = '<span class="nav-messages-badge messages-badge" id="messagesNavBadge" ' +
     'style="display:none;" aria-label="Mensajes no leídos">0</span>';

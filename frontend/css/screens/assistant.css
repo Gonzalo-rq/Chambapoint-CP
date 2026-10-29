@@ -1,0 +1,304 @@
+.fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 14px);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  z-index: 80;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.fab svg {
+  width: 24px;
+  height: 24px;
+}
+
+.fab:hover,
+.fab.active {
+  transform: scale(1.08);
+  box-shadow: 0 20px 44px rgba(59, 130, 246, 0.34);
+}
+
+.fab:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus), 0 20px 44px rgba(59, 130, 246, 0.34);
+}
+
+.assistant-panel {
+  position: fixed;
+  right: 14px;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 82px);
+  width: min(340px, calc(100vw - 28px));
+  height: 440px;
+  max-height: calc(100vh - var(--nav-h) - var(--header-h) - 40px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 90;
+  animation: assistant-in var(--dur-slow) var(--ease);
+}
+
+@keyframes assistant-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.assistant-panel[hidden] {
+  display: none;
+}
+
+.assistant-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+}
+
+.assistant-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.assistant-title small {
+  display: block;
+  opacity: 0.85;
+  font-size: var(--fs-xs);
+}
+
+.assistant-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.assistant-close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  opacity: 0.85;
+}
+
+.assistant-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.assistant-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--color-surface-alt);
+}
+
+.assistant-msg {
+  max-width: 85%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.assistant-msg.bot {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  align-self: flex-start;
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.assistant-msg.user {
+  background: var(--color-primary);
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.assistant-msg.error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border-color: transparent;
+}
+
+.assistant-msg strong {
+  font-weight: 600;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  height: 16px;
+}
+
+.dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+  animation: assistant-bounce 1s infinite ease-in-out;
+}
+
+.dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes assistant-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.quick-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0 var(--space-1) var(--space-1);
+}
+
+.quick-reply {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+  border: 1px solid var(--color-primary-soft-2);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.quick-reply:hover {
+  background: var(--color-primary-soft-2);
+}
+
+.assistant-input {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.assistant-input input {
+  flex: 1;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-base);
+  background: var(--color-surface-alt);
+}
+
+.assistant-input input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.assistant-send {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: #fff;
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assistant-send:hover {
+  filter: brightness(1.06);
+}
+
+.exchange-badge {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.review-head-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sentiment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.sentiment-badge.positive {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.sentiment-badge.negative {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.sentiment-badge.neutral {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}

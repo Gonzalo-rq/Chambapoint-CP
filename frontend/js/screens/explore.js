@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { api, getToken } from "../api.js";
 import { requireAuth } from "../auth.js";
 import { showSkeleton, toast } from "../ui.js";
 import { avatarHtml, escapeHtml, bottomNav } from "../components.js";
@@ -11,6 +11,8 @@ const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 const chips = document.querySelectorAll(".chip");
 const avatar = document.getElementById("userAvatar");
+const recommendedSection = document.getElementById("recommendedSection");
+const recommendedList = document.getElementById("recommendedList");
 
 avatar.outerHTML = avatarHtml(user);
 
@@ -26,6 +28,8 @@ let meMarker = null;
 let currentWorkers = [];
 
 document.body.insertAdjacentHTML("beforeend", bottomNav("explore", user.role));
+
+void loadRecommended();
 
 function workerIcon(name) {
   const initials = (name || "?")
@@ -151,6 +155,63 @@ async function loadWorkers() {
     if (seq !== loadSeq) return;
     listEl.innerHTML = `<div class="empty-state"><h3>No pudimos cargar</h3><p>${escapeHtml(err.message)}</p></div>`;
     toast(err.message, "error");
+  }
+}
+
+function renderRecommended(items) {
+  const cards = items
+    .map((item) => {
+      const w = item?.worker;
+      if (!w?.id) return "";
+      const rating = Number(w.ratingAverage) || 0;
+      const tags = [];
+      if (item.esPopular) tags.push("Popular");
+      if (w.profession) tags.push(w.profession);
+      return `
+      <article class="worker-card" data-id="${w.id}" tabindex="0" role="link" aria-label="Ver perfil de ${escapeHtml(w.name || "")}">
+        ${avatarHtml(w, "")}
+        <div class="meta">
+          <div class="name-row">
+            <span class="name">${escapeHtml(w.name || "")}</span>
+            <span class="rating">★ ${rating ? rating.toFixed(1) : " Nuevo"}</span>
+          </div>
+          <div class="profession">${escapeHtml(w.profession || "")}</div>
+          <div class="tags">${tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</div>
+        </div>
+      </article>`;
+    })
+    .join("");
+
+  if (!cards.trim()) {
+    recommendedSection.hidden = true;
+    return;
+  }
+
+  recommendedList.innerHTML = cards;
+  recommendedSection.hidden = false;
+
+  recommendedList.querySelectorAll(".worker-card").forEach((card) => {
+    const open = () => {
+      window.location.href = `worker.html?id=${card.dataset.id}`;
+    };
+    card.addEventListener("click", open);
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    });
+  });
+}
+
+async function loadRecommended() {
+  if (!getToken()) return;
+  try {
+    const items = await api("/api/workers/recommended");
+    renderRecommended(Array.isArray(items) ? items : []);
+  } catch (err) {
+    recommendedSection.hidden = true;
+    if (err?.status && err.status !== 401) console.warn("Recomendaciones no disponibles:", err.status);
   }
 }
 
