@@ -32,6 +32,8 @@ function normalizeWorker(raw) {
     photos: toList(r.photos ?? r.Photos),
     createdAt: r.createdAt ?? r.CreatedAt ?? null,
     author: r.author ?? r.Author ?? null,
+    sentiment: r.sentiment ?? r.Sentiment ?? null,
+    sentimentProbability: r.sentimentProbability ?? r.SentimentProbability ?? null,
   }));
   return {
     ...raw,
@@ -226,38 +228,48 @@ function renderTab() {
   document.getElementById("reviewForm")?.addEventListener("submit", submitReview);
 }
 
+function pick(obj, camel, pascal) {
+  if (!obj) return undefined;
+  return obj[camel] !== undefined ? obj[camel] : obj[pascal];
+}
+
 function sentimentBadge(r) {
-  const label = String(r.sentiment || "").toLowerCase();
-  if (!label || r.sentimentProbability == null) return "";
+  const label = String(pick(r, "sentiment", "Sentiment") || "").toLowerCase();
+  const probRaw = pick(r, "sentimentProbability", "SentimentProbability");
+  if (!label || probRaw == null) return "";
   const positive = ["positivo", "positive", "pos", "buena", "bueno"].includes(label);
   const negative = ["negativo", "negative", "neg", "mala", "malo"].includes(label);
   const cls = positive ? "positive" : negative ? "negative" : "neutral";
   const icon = positive ? "😊" : negative ? "😞" : "😐";
-  const prob = Number(r.sentimentProbability);
+  const prob = Number(probRaw);
   const suffix = Number.isFinite(prob) ? ` ${Math.round(prob * 100)}%` : "";
-  return `<span class="sentiment-badge ${cls}" title="Análisis de sentimiento">${icon} ${escapeHtml(r.sentiment)}${suffix}</span>`;
+  return `<span class="sentiment-badge ${cls}" title="Análisis de sentimiento">${icon} ${escapeHtml(String(pick(r, "sentiment", "Sentiment")))}${suffix}</span>`;
 }
 
 function reviewItem(r) {
-  const rating = Number(r.rating) || 0;
+  const rating = Number(pick(r, "rating", "Rating")) || 0;
+  const author = pick(r, "author", "Author");
+  const body = pick(r, "text", "Text");
+  const photos = pick(r, "photos", "Photos");
+  const createdAt = pick(r, "createdAt", "CreatedAt");
   return `
     <article class="review-item">
       <div class="review-head">
-        <strong>${escapeHtml(r.author || "Cliente")}</strong>
+        <strong>${escapeHtml(author || "Cliente")}</strong>
         <span class="review-head-right">
           ${sentimentBadge(r)}
           <span class="review-stars">${"★".repeat(rating)}${"☆".repeat(Math.max(0, 5 - rating))}</span>
         </span>
       </div>
-      <p>${escapeHtml(r.text)}</p>
+      <p>${escapeHtml(body || "")}</p>
       ${
-        r.photos?.length
-          ? `<div class="photo-list" style="margin-top:8px">${r.photos
+        photos?.length
+          ? `<div class="photo-list" style="margin-top:8px">${photos
               .map((p) => `<img class="photo-thumb" src="${escapeHtml(p)}" alt="" loading="lazy" />`)
               .join("")}</div>`
           : ""
       }
-      <p class="text-muted" style="font-size:11px;margin-top:6px">${r.createdAt ? formatDate(r.createdAt, { dateStyle: "short", timeStyle: undefined }) : ""}</p>
+      <p class="text-muted" style="font-size:11px;margin-top:6px">${createdAt ? formatDate(createdAt, { dateStyle: "short", timeStyle: undefined }) : ""}</p>
     </article>`;
 }
 
