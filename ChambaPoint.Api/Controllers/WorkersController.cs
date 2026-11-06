@@ -50,52 +50,70 @@ public class WorkersController : ControllerBase
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var allWorkers = await _db.Workers.Select(w => w.Id).ToListAsync(ct);
-        var recomendados = await _recommendationService.RecomendarAsync(userId.Value.ToString(), allWorkers, topK: 5, ct);
-
-        var workerIds = recomendados.Select(r => r.ProductId).ToList();
-        var workers = await _db.Workers
+        // 1. Obtener todos los trabajadores activos de la BD con sus usuarios
+        var allWorkers = await _db.Workers
             .Include(w => w.User)
-            .Where(w => workerIds.Contains(w.Id))
             .ToListAsync(ct);
 
+        if (allWorkers.Count == 0)
+        {
+            return Ok(new List<object>());
+        }
+
+        // 2. Ejecutar inferencia del modelo ML
+        var allWorkerIds = allWorkers.Select(w => w.Id).ToList();
+        var prediccionesML = await _recommendationService.RecomendarAsync(userId.Value.ToString(), allWorkerIds, topK: 10, ct);
+
         var dtos = new List<object>();
-        foreach (var rec in recomendados)
+
+        foreach (var worker in allWorkers)
         {
-            var worker = workers.FirstOrDefault(w => w.Id == rec.ProductId);
-            if (worker != null)
+            var pred = prediccionesML.FirstOrDefault(p => p.ProductId == worker.Id);
+            double finalScore;
+            bool esNuevo = false;
+
+            if (pred != null && !pred.DeFrio)
             {
-                var dto = await BuildWorkerDtoAsync(worker, includeReviews: false, ct);
-                dtos.Add(new
-                {
-                    worker = dto,
-                    score = Math.Round(rec.Score, 2),
-                    esPopular = rec.DeFrio
-                });
+                // El modelo ML tiene historial personalizado para este usuario
+                finalScore = Math.Round(pred.Score, 2);
             }
+            else
+            {
+                // Trabajador nuevo o usuario sin historial:
+                // Si el trabajador tiene calificación promedio, usamos eso; si es nuevo (sin reviews), le asignamos un boost de bienvenida de 4.8
+                var ratingStats = await _db.Reviews
+                    .Where(r => r.WorkerId == worker.Id)
+                    .GroupBy(r => 1)
+                    .Select(g => new { Avg = (double?)g.Average(r => r.Rating) })
+                    .FirstOrDefaultAsync(ct);
+
+                if (ratingStats?.Avg != null)
+                {
+                    finalScore = Math.Round(ratingStats.Avg.Value, 1);
+                }
+                else
+                {
+                    finalScore = 4.8; // Puntaje inicial para darle visibilidad en el catálogo
+                    esNuevo = true;
+                }
+            }
+
+            dtos.Add(new
+            {
+                worker = await BuildWorkerDtoAsync(worker, includeReviews: false, ct),
+                score = finalScore,
+                esPopular = !esNuevo,
+                esNuevo = esNuevo
+            });
         }
 
-        // Si el usuario no tiene historial o no hubo matches, completar con los mejor valorados
-        if (dtos.Count == 0)
-        {
-            var topWorkers = await _db.Workers
-                .Include(w => w.User)
-                .OrderByDescending(w => w.JobsCount)
-                .Take(5)
-                .ToListAsync(ct);
+        // Ordenar de mayor a menor score y retornar el top 6
+        var resultadoFinal = dtos
+            .OrderByDescending(d => ((dynamic)d).score)
+            .Take(6)
+            .ToList();
 
-            foreach (var w in topWorkers)
-            {
-                dtos.Add(new
-                {
-                    worker = await BuildWorkerDtoAsync(w, includeReviews: false, ct),
-                    score = 5.0,
-                    esPopular = true
-                });
-            }
-        }
-
-        return Ok(dtos);
+        return Ok(resultadoFinal);
     }
 
     [HttpGet("{id:int}")]

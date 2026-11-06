@@ -33,6 +33,7 @@ public class AuthController : ControllerBase
     }
 
     public record RegisterRequest(string Name, string Email, string Password, string? Role, string? AvatarUrl);
+    public record LoginRequest(string Email, string Password);
 
     private sealed record CachedUser(int Id, string Name, string Email, string Role, string? AvatarUrl, DateTime CreatedAt, bool HasWorkerProfile);
 
@@ -49,18 +50,20 @@ public class AuthController : ControllerBase
 
         if (request.Password.Length < 6)
         {
-            return BadRequest(new { message = "La contraseña debe tener al menos 6 caracteres." });
+            return BadRequest(new { message = "Password debe tener al menos 6 caracteres." });
         }
-
-        var role = string.Equals(request.Role, Roles.Worker, StringComparison.OrdinalIgnoreCase)
-            ? Roles.Worker
-            : Roles.Customer;
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var exists = await _db.Users.AnyAsync(u => u.Email == normalizedEmail, ct);
         if (exists)
         {
-            return Conflict(new { message = "Ya existe una cuenta con ese email." });
+            return Conflict(new { message = "El email ya está registrado." });
+        }
+
+        var role = request.Role ?? Roles.Customer;
+        if (role != Roles.Customer && role != Roles.Worker)
+        {
+            return BadRequest(new { message = "Rol inválido. Usa 'Customer' o 'Worker'." });
         }
 
         var user = new User
@@ -68,34 +71,22 @@ public class AuthController : ControllerBase
             Name = request.Name.Trim(),
             Email = normalizedEmail,
             Role = role,
-            AvatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl) ? null : request.AvatarUrl
+            AvatarUrl = request.AvatarUrl
         };
         user.PasswordHash = _hasher.HashPassword(user, request.Password);
 
         _db.Users.Add(user);
-
-        if (role == Roles.Worker)
-        {
-            _db.Workers.Add(new Worker
-            {
-                User = user,
-                Profession = RequestCategories.Plomeria
-            });
-        }
-
         await _db.SaveChangesAsync(ct);
 
+        var token = _tokenService.GenerateToken(user);
         await CacheUserAsync(user, ct);
 
-        var token = _tokenService.GenerateToken(user);
-        return Created($"/api/users/{user.Id}", new
+        return StatusCode(StatusCodes.Status201Created, new
         {
             token,
             user = BuildUserDto(user)
         });
     }
-
-    public record LoginRequest(string Email, string Password);
 
     [EnableRateLimiting("auth")]
     [HttpPost("login")]
@@ -106,9 +97,10 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Email y Password son obligatorios." });
         }
 
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var user = await _db.Users
             .Include(u => u.WorkerProfile)
-            .FirstOrDefaultAsync(u => u.Email == request.Email.Trim().ToLowerInvariant(), ct);
+            .FirstOrDefaultAsync(u => u.Email == normalizedEmail, ct);
 
         if (user is null)
         {
@@ -121,9 +113,9 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Credenciales inválidas." });
         }
 
+        var token = _tokenService.GenerateToken(user);
         await CacheUserAsync(user, ct);
 
-        var token = _tokenService.GenerateToken(user);
         return Ok(new
         {
             token,
@@ -138,7 +130,8 @@ public class AuthController : ControllerBase
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var cached = await _cache.GetAsync<CachedUser>("user:" + userId, ct);
+        var cacheKey = "user:" + userId;
+        var cached = await _cache.GetAsync<CachedUser>(cacheKey, ct);
         if (cached is not null)
         {
             return Ok(new { user = BuildCachedUserDto(cached) });
@@ -146,7 +139,7 @@ public class AuthController : ControllerBase
 
         var user = await _db.Users
             .Include(u => u.WorkerProfile)
-            .FirstOrDefaultAsync(u => u.Id == userId, ct);
+            .FirstOrDefaultAsync(u => u.Id == userId.Value, ct);
 
         if (user is null)
         {
@@ -167,6 +160,34 @@ public class AuthController : ControllerBase
             await _cache.RemoveAsync("user:" + userId, ct);
         }
         return Ok(new { message = "Sesión cerrada." });
+    }
+
+    [Authorize]
+    [HttpDelete("me")]
+    public async Task<IActionResult> DeleteAccount(CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId == null) return Unauthorized();
+
+        var user = await _db.Users
+            .Include(u => u.WorkerProfile)
+            .FirstOrDefaultAsync(u => u.Id == userId.Value, ct);
+
+        if (user == null)
+        {
+            return NotFound(new { message = "Usuario no encontrado." });
+        }
+
+        await _cache.RemoveAsync("user:" + user.Id, ct);
+        if (user.WorkerProfile != null)
+        {
+            await _cache.RemoveAsync("worker:" + user.WorkerProfile.Id, ct);
+        }
+
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new { message = "Cuenta eliminada exitosamente." });
     }
 
     private async Task CacheUserAsync(User user, CancellationToken ct)
