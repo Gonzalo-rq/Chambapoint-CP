@@ -45,54 +45,137 @@ public class WorkersController : ControllerBase
 
     [HttpGet("recommended")]
     [Authorize]
-    public async Task<IActionResult> GetRecommended(CancellationToken ct)
+    public async Task<IActionResult> GetRecommended(
+        [FromQuery] string? q,
+        [FromQuery] string? profession,
+        CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var allWorkers = await _db.Workers.Select(w => w.Id).ToListAsync(ct);
-        var recomendados = await _recommendationService.RecomendarAsync(userId.Value.ToString(), allWorkers, topK: 5, ct);
+        // 1. Obtener candidatos (incluyendo nuevos empleados) filtrados por criterios si existen
+        var filteredWorkers = await _workerService.SearchAsync(q, profession, ct);
 
-        var workerIds = recomendados.Select(r => r.ProductId).ToList();
-        var workers = await _db.Workers
-            .Include(w => w.User)
-            .Where(w => workerIds.Contains(w.Id))
-            .ToListAsync(ct);
-
-        var dtos = new List<object>();
-        foreach (var rec in recomendados)
+        // Excluir al propio usuario si es trabajador, salvo que sea el único resultado
+        var candidateWorkers = filteredWorkers.Where(w => w.UserId != userId.Value).ToList();
+        if (candidateWorkers.Count == 0 && filteredWorkers.Count > 0)
         {
-            var worker = workers.FirstOrDefault(w => w.Id == rec.ProductId);
-            if (worker != null)
-            {
-                var dto = await BuildWorkerDtoAsync(worker, includeReviews: false, ct);
-                dtos.Add(new
-                {
-                    worker = dto,
-                    score = Math.Round(rec.Score, 2),
-                    esPopular = rec.DeFrio
-                });
-            }
+            candidateWorkers = filteredWorkers;
         }
 
-        // Si el usuario no tiene historial o no hubo matches, completar con los mejor valorados
-        if (dtos.Count == 0)
+        if (candidateWorkers.Count == 0)
         {
-            var topWorkers = await _db.Workers
-                .Include(w => w.User)
-                .OrderByDescending(w => w.JobsCount)
-                .Take(5)
-                .ToListAsync(ct);
+            return Ok(Array.Empty<object>());
+        }
 
-            foreach (var w in topWorkers)
+        var candidateIds = candidateWorkers.Select(w => w.Id).ToList();
+
+        // 2. Inferencia del modelo ML.NET
+        var mlRecommendations = await _recommendationService.RecomendarAsync(
+            userId.Value.ToString(),
+            candidateIds,
+            topK: candidateIds.Count,
+            ct);
+        var mlScoresByWorkerId = mlRecommendations.ToDictionary(r => r.ProductId, r => r);
+
+        // 3. Historial de categorías solicitadas por el cliente para afinidad
+        var customerCategories = await _db.Requests
+            .Where(r => r.CustomerId == userId.Value)
+            .Select(r => r.Category)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var preferredCategories = new HashSet<string>(
+            customerCategories.Select(WorkerService.NormalizeText),
+            StringComparer.OrdinalIgnoreCase);
+
+        // 4. Estadísticas en vivo de reseñas y solicitudes completadas por trabajador
+        var reviewStatsList = await _db.Reviews
+            .Where(r => candidateIds.Contains(r.WorkerId))
+            .GroupBy(r => r.WorkerId)
+            .Select(g => new
             {
-                dtos.Add(new
+                WorkerId = g.Key,
+                AvgRating = g.Average(r => (double)r.Rating),
+                Count = g.Count(),
+                PositiveCount = g.Count(r => r.Sentiment == "Positivo")
+            })
+            .ToListAsync(ct);
+        var reviewStatsByWorker = reviewStatsList.ToDictionary(x => x.WorkerId, x => x);
+
+        var completedCounts = await _db.Requests
+            .Where(r => r.WorkerId.HasValue && candidateIds.Contains(r.WorkerId.Value) && r.Status == RequestStatuses.Completada)
+            .GroupBy(r => r.WorkerId!.Value)
+            .Select(g => new { WorkerId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.WorkerId, x => x.Count, ct);
+
+        // 5. Calcular score dinámico y ordenar según estadísticas reales (reseñas > sin reseñas, rating, trabajos, experiencia)
+        var scoredList = candidateWorkers
+            .Select(worker =>
+            {
+                var hasMl = mlScoresByWorkerId.TryGetValue(worker.Id, out var mlRec);
+                double? mlScore = (hasMl && !mlRec!.DeFrio) ? mlRec.Score : null;
+
+                int ratingCount = 0;
+                double ratingAvg = 0.0;
+                int posCount = 0;
+                if (reviewStatsByWorker.TryGetValue(worker.Id, out var stats))
                 {
-                    worker = await BuildWorkerDtoAsync(w, includeReviews: false, ct),
-                    score = 5.0,
-                    esPopular = true
-                });
-            }
+                    ratingCount = stats.Count;
+                    ratingAvg = stats.AvgRating;
+                    posCount = stats.PositiveCount;
+                }
+
+                int jobsCompleted = completedCounts.GetValueOrDefault(worker.Id, 0);
+
+                var workerNormCategory = WorkerService.NormalizeText(
+                    WorkerService.ResolveCategoryFromTerm(worker.Profession) ?? worker.Profession);
+                bool hasAffinity = preferredCategories.Contains(workerNormCategory);
+
+                double score = WorkerService.ComputeWorkerScore(
+                    worker,
+                    ratingCount,
+                    ratingAvg,
+                    posCount,
+                    jobsCompleted,
+                    mlScore,
+                    hasAffinity);
+
+                bool esNuevo = ratingCount == 0 && jobsCompleted == 0;
+
+                return new
+                {
+                    Worker = worker,
+                    Score = Math.Round(score, 2),
+                    RatingCount = ratingCount,
+                    RatingAvg = ratingAvg,
+                    JobsCompleted = jobsCompleted,
+                    EsNuevo = esNuevo,
+                    EsPopular = ratingCount > 0 || jobsCompleted > 0
+                };
+            })
+            .OrderByDescending(x => x.RatingCount > 0)
+            .ThenByDescending(x => x.Score)
+            .ThenByDescending(x => x.RatingAvg)
+            .ThenByDescending(x => x.RatingCount)
+            .ThenByDescending(x => x.JobsCompleted)
+            .ThenByDescending(x => x.Worker.ExperienceYears)
+            .ThenByDescending(x => x.Worker.IsOnline)
+            .ThenByDescending(x => x.Worker.Id)
+            .Take(20)
+            .ToList();
+
+        var dtos = new List<object>();
+        foreach (var item in scoredList)
+        {
+            var dto = await BuildWorkerDtoAsync(item.Worker, includeReviews: false, ct);
+            dtos.Add(new
+            {
+                worker = dto,
+                score = item.Score,
+                esPopular = item.EsPopular,
+                esNuevo = item.EsNuevo
+            });
         }
 
         return Ok(dtos);
@@ -223,6 +306,7 @@ public class WorkersController : ControllerBase
         return new
         {
             worker.Id,
+            userId = worker.UserId,
             name = worker.User.Name,
             email = worker.User.Email,
             avatarUrl = worker.User.AvatarUrl,

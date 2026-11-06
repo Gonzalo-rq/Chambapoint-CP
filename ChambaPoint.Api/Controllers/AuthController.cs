@@ -76,10 +76,16 @@ public class AuthController : ControllerBase
 
         if (role == Roles.Worker)
         {
+            var random = new Random();
             _db.Workers.Add(new Worker
             {
                 User = user,
-                Profession = RequestCategories.Plomeria
+                Profession = RequestCategories.Plomeria,
+                DistanceKm = 10.0,
+                IsOnline = true,
+                Latitude = -12.046374 + (random.NextDouble() - 0.5) * 0.06,
+                Longitude = -77.042793 + (random.NextDouble() - 0.5) * 0.06,
+                CreatedAt = DateTime.UtcNow
             });
         }
 
@@ -167,6 +173,34 @@ public class AuthController : ControllerBase
             await _cache.RemoveAsync("user:" + userId, ct);
         }
         return Ok(new { message = "Sesión cerrada." });
+    }
+
+    [Authorize]
+    [HttpDelete("me")]
+    public async Task<IActionResult> DeleteAccount(CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var user = await _db.Users
+            .Include(u => u.WorkerProfile)
+            .FirstOrDefaultAsync(u => u.Id == userId.Value, ct);
+
+        if (user is null)
+        {
+            return NotFound(new { message = "Usuario no encontrado." });
+        }
+
+        await _cache.RemoveAsync("user:" + user.Id, ct);
+        if (user.WorkerProfile != null)
+        {
+            await _cache.RemoveAsync("worker:" + user.WorkerProfile.Id, ct);
+        }
+
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new { message = "Cuenta eliminada exitosamente." });
     }
 
     private async Task CacheUserAsync(User user, CancellationToken ct)

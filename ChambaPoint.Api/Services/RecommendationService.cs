@@ -87,18 +87,20 @@ public sealed class RecommendationService : IRecommendationService, IDisposable
             return resultado;
         }
 
-        // Solo productos que existen en el catálogo y fueron vistos en el entrenamiento.
-        var objetivo = _productosConocidos
-            .Intersect(candidatos.Distinct())
-            .OrderBy(id => id)
-            .ToList();
+        var listaCandidatos = candidatos.Distinct().OrderBy(id => id).ToList();
+        if (listaCandidatos.Count == 0)
+        {
+            return resultado;
+        }
 
         await _prediccionLock.WaitAsync(cancellationToken);
         try
         {
-            if (EsUsuarioConocido(userId) && objetivo.Count > 0)
+            var usuarioConocido = EsUsuarioConocido(userId);
+
+            foreach (var productId in listaCandidatos)
             {
-                foreach (var productId in objetivo)
+                if (usuarioConocido && _productosConocidos.Contains(productId))
                 {
                     var prediccion = engine.Predict(new RatingTrainingData
                     {
@@ -106,27 +108,39 @@ public sealed class RecommendationService : IRecommendationService, IDisposable
                         ProductId = productId,
                         Rating = 0
                     });
-                    resultado.Add(new RecomendacionProducto { ProductId = productId, Score = prediccion.Score });
+                    resultado.Add(new RecomendacionProducto
+                    {
+                        ProductId = productId,
+                        Score = prediccion.Score,
+                        DeFrio = false
+                    });
                 }
-
-                resultado = resultado
-                    .OrderByDescending(r => r.Score)
-                    .Take(Math.Max(0, topK))
-                    .ToList();
+                else if (_popularidadPorProducto.TryGetValue(productId, out var popScore))
+                {
+                    resultado.Add(new RecomendacionProducto
+                    {
+                        ProductId = productId,
+                        Score = popScore,
+                        DeFrio = true
+                    });
+                }
+                else
+                {
+                    // Nuevos empleados que aún no estaban en el CSV de entrenamiento
+                    resultado.Add(new RecomendacionProducto
+                    {
+                        ProductId = productId,
+                        Score = 3.0f,
+                        DeFrio = true
+                    });
+                }
             }
-            else
-            {
-                // Arranque en frío: usuarios sin historial reciben los productos mejor valorados.
-                var objetivoPopularidad = _popularidadPorProducto
-                    .Where(kvp => candidatos.Contains(kvp.Key))
-                    .OrderByDescending(kvp => kvp.Value)
-                    .ThenBy(kvp => kvp.Key)
-                    .Take(Math.Max(0, topK));
 
-                resultado = objetivoPopularidad
-                    .Select(kvp => new RecomendacionProducto { ProductId = kvp.Key, Score = kvp.Value, DeFrio = true })
-                    .ToList();
-            }
+            resultado = resultado
+                .OrderByDescending(r => r.Score)
+                .ThenBy(r => r.ProductId)
+                .Take(Math.Max(0, topK))
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -184,6 +198,7 @@ public sealed class RecommendationService : IRecommendationService, IDisposable
 
             if (File.Exists(ModelPath))
             {
+                CargarVocabularioDesdeArchivo();
                 CargarModelo(ModelPath);
                 return;
             }
@@ -201,6 +216,34 @@ public sealed class RecommendationService : IRecommendationService, IDisposable
         finally
         {
             _cargaLock.Release();
+        }
+    }
+
+    private void CargarVocabularioDesdeArchivo()
+    {
+        if (_productosConocidos.Count > 0)
+        {
+            return;
+        }
+
+        var dataPath = ResolverRuta(_options.TrainingDataPath);
+        if (!File.Exists(dataPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var datos = _mlContext.Data.LoadFromTextFile<RatingTrainingData>(
+                dataPath,
+                separatorChar: ',',
+                hasHeader: true,
+                allowQuoting: true);
+            CargarVocabulario(datos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo cargar el vocabulario inicial desde '{DataPath}'.", dataPath);
         }
     }
 

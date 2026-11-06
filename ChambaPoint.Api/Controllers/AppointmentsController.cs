@@ -16,15 +16,18 @@ public class AppointmentsController : ControllerBase
     private readonly IAppointmentService _appointmentService;
     private readonly IRequestNotifier _notifier;
     private readonly IHubContext<NotificationsHub> _hub;
+    private readonly ICacheService _cache;
 
     public AppointmentsController(
         IAppointmentService appointmentService,
         IRequestNotifier notifier,
-        IHubContext<NotificationsHub> hub)
+        IHubContext<NotificationsHub> hub,
+        ICacheService cache)
     {
         _appointmentService = appointmentService;
         _notifier = notifier;
         _hub = hub;
+        _cache = cache;
     }
 
     [HttpPost]
@@ -149,6 +152,8 @@ public class AppointmentsController : ControllerBase
         if (statusCode == 403) return StatusCode(403, new { message = error });
         if (statusCode == 404) return NotFound(new { message = error });
         if (appointment == null) return StatusCode(500, new { message = "Error inesperado al actualizar la cita." });
+
+        await _cache.RemoveAsync("worker:" + appointment.WorkerId, ct);
 
         var changerName = User.FindFirstValue("name") ?? User.Identity?.Name;
 

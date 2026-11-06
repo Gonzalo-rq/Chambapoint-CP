@@ -42,6 +42,7 @@ export async function api(path, { method = "GET", body, auth = true, signal } = 
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      cache: "no-store",
       signal,
     });
   } catch {
@@ -71,6 +72,8 @@ export async function api(path, { method = "GET", body, auth = true, signal } = 
 
   return data;
 }
+
+export const apiFetch = api;
 
 function defaultErrorMessage(status) {
   const map = {

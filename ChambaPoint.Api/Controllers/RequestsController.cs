@@ -16,15 +16,18 @@ public class RequestsController : ControllerBase
     private readonly IRequestService _requestService;
     private readonly IRequestNotifier _notifier;
     private readonly IHubContext<NotificationsHub> _hub;
+    private readonly ICacheService _cache;
 
     public RequestsController(
         IRequestService requestService,
         IRequestNotifier notifier,
-        IHubContext<NotificationsHub> hub)
+        IHubContext<NotificationsHub> hub,
+        ICacheService cache)
     {
         _requestService = requestService;
         _notifier = notifier;
         _hub = hub;
+        _cache = cache;
     }
 
     [Authorize(Roles = Roles.Customer)]
@@ -157,6 +160,11 @@ public class RequestsController : ControllerBase
         if (statusCode == 403) return StatusCode(403, new { message = error });
         if (statusCode == 409) return Conflict(new { message = error });
         if (request == null) return StatusCode(500, new { message = "Error inesperado al actualizar la solicitud." });
+
+        if (request.WorkerId.HasValue)
+        {
+            await _cache.RemoveAsync("worker:" + request.WorkerId.Value, ct);
+        }
 
         await _notifier.PublishAsync("request.status_changed", new
         {

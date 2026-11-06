@@ -35,6 +35,7 @@ let profession = "";
 let query = "";
 let searchTimer = null;
 let loadSeq = 0;
+let recSeq = 0;
 let map = null;
 let markersLayer = null;
 let meMarker = null;
@@ -182,16 +183,20 @@ function renderRecommended(items) {
       const w = item?.worker;
       if (!w?.id) return "";
       const rating = Number(w.ratingAverage) || 0;
+      const ratingCount = Number(w.ratingCount) || 0;
       const tags = [];
-      if (item.esPopular) tags.push("Popular");
+      if (item.esNuevo) tags.push("Nuevo");
+      else if (item.esPopular) tags.push("Popular");
       if (w.profession) tags.push(w.profession);
+      if (w.experienceYears) tags.push(`${w.experienceYears} años`);
+      if (ratingCount > 0) tags.push(`${ratingCount} reseña${ratingCount > 1 ? "s" : ""}`);
       return `
       <article class="worker-card" data-id="${w.id}" tabindex="0" role="link" aria-label="Ver perfil de ${escapeHtml(w.name || "")}">
         ${avatarHtml(w, "")}
         <div class="meta">
           <div class="name-row">
             <span class="name">${escapeHtml(w.name || "")}</span>
-            <span class="rating">★ ${rating ? rating.toFixed(1) : " Nuevo"}</span>
+            <span class="rating">★ ${ratingCount > 0 ? rating.toFixed(1) : " Nuevo"}</span>
           </div>
           <div class="profession">${escapeHtml(w.profession || "")}</div>
           <div class="tags">${tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</div>
@@ -224,10 +229,17 @@ function renderRecommended(items) {
 
 async function loadRecommended() {
   if (!getToken()) return;
+  const seq = ++recSeq;
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  if (profession) params.set("profession", profession);
+  const qs = params.toString();
   try {
-    const items = await api("/api/workers/recommended");
+    const items = await api(`/api/workers/recommended${qs ? `?${qs}` : ""}`);
+    if (seq !== recSeq) return;
     renderRecommended(Array.isArray(items) ? items : []);
   } catch (err) {
+    if (seq !== recSeq) return;
     recommendedSection.hidden = true;
     if (err?.status && err.status !== 401) console.warn("Recomendaciones no disponibles:", err.status);
   }
@@ -246,10 +258,11 @@ function renderWorkers(workers) {
   listEl.innerHTML = workers
     .map((w) => {
       const rating = Number(w.ratingAverage) || 0;
+      const ratingCount = Number(w.ratingCount) || 0;
       const tags = [];
       if (w.isOnline) tags.push("En línea");
       if (w.experienceYears) tags.push(`${w.experienceYears} años`);
-      if (w.distanceKm != null) tags.push(`${w.distanceKm} km`);
+      if (ratingCount > 0) tags.push(`${ratingCount} reseña${ratingCount > 1 ? "s" : ""}`);
       if (w.jobsCount) tags.push(`${w.jobsCount} trabajos`);
 
       // TAREA 2: Calcular distancia real vs radio de cobertura
@@ -271,7 +284,7 @@ function renderWorkers(workers) {
         <div class="meta">
           <div class="name-row">
             <span class="name">${escapeHtml(w.name)}</span>
-            <span class="rating">★ ${rating ? rating.toFixed(1) : " Nuevo"}</span>
+            <span class="rating">★ ${ratingCount > 0 ? rating.toFixed(1) : " Nuevo"}</span>
           </div>
           <div class="profession">${escapeHtml(w.profession)} · ${distanciaTexto} ${badgeZona}</div>
           <div class="tags">${tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</div>
@@ -294,6 +307,11 @@ function renderWorkers(workers) {
   });
 }
 
+function refreshAll() {
+  void loadWorkers();
+  void loadRecommended();
+}
+
 chips.forEach((chip) => {
   chip.addEventListener("click", () => {
     chips.forEach((c) => {
@@ -303,7 +321,7 @@ chips.forEach((chip) => {
     chip.classList.add("active");
     chip.setAttribute("aria-selected", "true");
     profession = chip.dataset.profession || "";
-    loadWorkers();
+    refreshAll();
   });
 });
 
@@ -311,14 +329,20 @@ function scheduleSearch() {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     query = searchInput.value.trim();
-    loadWorkers();
+    refreshAll();
   }, 350);
 }
 
 searchInput.addEventListener("input", scheduleSearch);
 searchBtn.addEventListener("click", () => {
   query = searchInput.value.trim();
-  loadWorkers();
+  refreshAll();
+});
+
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) {
+    refreshAll();
+  }
 });
 
 document.getElementById("locateBtn")?.addEventListener("click", locateMe);
