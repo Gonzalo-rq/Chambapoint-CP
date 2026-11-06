@@ -19,7 +19,10 @@ public record WorkerProfileInput(
     double DistanceKm,
     string About,
     List<string>? Certifications,
-    List<string>? Gallery);
+    List<string>? Gallery,
+    bool? IsOnline = true,
+    double? Latitude = null,
+    double? Longitude = null);
 
 public class WorkerService : IWorkerService
 {
@@ -46,15 +49,24 @@ public class WorkerService : IWorkerService
 
     public async Task<Worker> CreateProfileAsync(int userId, WorkerProfileInput input, CancellationToken ct = default)
     {
+        // Coordenadas base en Lima Metropolitana (dispersión aleatoria leve alrededor del centro si no se enviaron)
+        var random = new Random();
+        var defaultLat = -12.046374 + (random.NextDouble() - 0.5) * 0.08;
+        var defaultLng = -77.042793 + (random.NextDouble() - 0.5) * 0.08;
+
         var worker = new Worker
         {
             UserId = userId,
-            Profession = input.Profession,
+            Profession = input.Profession.Trim(),
             ExperienceYears = input.ExperienceYears,
-            DistanceKm = input.DistanceKm,
+            DistanceKm = input.DistanceKm > 0 ? input.DistanceKm : 10.0,
             About = input.About ?? string.Empty,
             Certifications = input.Certifications ?? new List<string>(),
-            Gallery = input.Gallery ?? new List<string>()
+            Gallery = input.Gallery ?? new List<string>(),
+            IsOnline = input.IsOnline ?? true,
+            Latitude = input.Latitude ?? defaultLat,
+            Longitude = input.Longitude ?? defaultLng,
+            CreatedAt = DateTime.UtcNow
         };
 
         _db.Workers.Add(worker);
@@ -64,12 +76,23 @@ public class WorkerService : IWorkerService
 
     public async Task<Worker> UpdateProfileAsync(Worker worker, WorkerProfileInput input, CancellationToken ct = default)
     {
-        worker.Profession = input.Profession;
+        worker.Profession = input.Profession.Trim();
         worker.ExperienceYears = input.ExperienceYears;
         worker.DistanceKm = input.DistanceKm;
         worker.About = input.About ?? string.Empty;
         worker.Certifications = input.Certifications ?? worker.Certifications;
         worker.Gallery = input.Gallery ?? worker.Gallery;
+
+        if (input.IsOnline.HasValue)
+        {
+            worker.IsOnline = input.IsOnline.Value;
+        }
+
+        if (input.Latitude.HasValue && input.Longitude.HasValue)
+        {
+            worker.Latitude = input.Latitude.Value;
+            worker.Longitude = input.Longitude.Value;
+        }
 
         await _db.SaveChangesAsync(ct);
         return worker;
