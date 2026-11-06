@@ -55,19 +55,21 @@ public class MessageService : IMessageService
             var request = await _db.Requests
                 .Include(r => r.Worker)
                 .FirstOrDefaultAsync(r => r.Id == input.RequestId.Value, ct);
+
             if (request == null)
             {
                 return (null, 400, "La solicitud referenciada no existe.");
             }
 
             var isCustomer = request.CustomerId == senderId;
-            var isAssignedWorker = request.WorkerId.HasValue
-                && request.Worker != null
-                && request.Worker.UserId == senderId;
+            var isAssignedWorker = request.WorkerId.HasValue && request.Worker?.UserId == senderId;
 
-            if (!isCustomer && !isAssignedWorker)
+            // PERMITIR: Si la solicitud está abierta (WorkerId == null) y quien envía es un trabajador
+            var senderIsWorker = await _db.Workers.AnyAsync(w => w.UserId == senderId, ct);
+
+            if (!isCustomer && !isAssignedWorker && !senderIsWorker)
             {
-                return (null, 403, "No formas parte de esa solicitud.");
+                return (null, 403, "No tienes permisos para escribir sobre esta solicitud.");
             }
         }
 
