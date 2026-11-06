@@ -48,6 +48,7 @@ public class MessagesController : ControllerBase
             messageId = message.Id,
             senderId = message.SenderId,
             senderName,
+            avatarUrl = message.Sender?.AvatarUrl,
             receiverId = message.ReceiverId,
             requestId = message.RequestId,
             text = message.Text,
@@ -88,6 +89,7 @@ public class MessagesController : ControllerBase
         if (pageSize < 1 || pageSize > 100) pageSize = 50;
 
         var (items, total, markedCount) = await _messageService.GetHistoryAsync(userId.Value, withUserId.Value, page, pageSize, ct);
+        var peer = await _messageService.GetPeerInfoAsync(withUserId.Value, ct);
 
         // Si se marcaron mensajes como leídos, notificar al remitente
         if (markedCount > 0)
@@ -102,6 +104,7 @@ public class MessagesController : ControllerBase
         return Ok(new
         {
             withUserId = withUserId.Value,
+            peer,
             items = items.Select(MapToDto),
             page,
             pageSize,

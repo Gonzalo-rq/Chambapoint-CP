@@ -58,17 +58,30 @@ public class RequestsController : ControllerBase
             createdAt = request.CreatedAt
         }, ct);
 
+        var signalrPayload = new
+        {
+            requestId = request.Id,
+            customerId = request.CustomerId,
+            customerName = request.Customer?.Name,
+            customerAvatar = request.Customer?.AvatarUrl,
+            category = request.Category,
+            description = request.Description,
+            urgency = request.Urgency,
+            createdAt = request.CreatedAt
+        };
+
         // Notificar en tiempo real vía SignalR
         if (request.Worker?.UserId is int workerUserId)
         {
-            await _hub.Clients.Group($"user:{workerUserId}").SendAsync("newRequest", new
+            await _hub.Clients.Group($"user:{workerUserId}").SendAsync("newRequest", signalrPayload, ct);
+        }
+        else if (!request.WorkerId.HasValue)
+        {
+            var targetWorkerUserIds = await _requestService.GetWorkerUserIdsByCategoryAsync(request.Category, ct);
+            foreach (var targetUserId in targetWorkerUserIds)
             {
-                requestId = request.Id,
-                customerName = request.Customer?.Name,
-                category = request.Category,
-                urgency = request.Urgency,
-                createdAt = request.CreatedAt
-            }, ct);
+                await _hub.Clients.Group($"user:{targetUserId}").SendAsync("newRequest", signalrPayload, ct);
+            }
         }
 
         return Created($"/api/requests/{request.Id}", MapToDto(request));
@@ -175,12 +188,24 @@ public class RequestsController : ControllerBase
             updatedAt = DateTime.UtcNow
         }, ct);
 
-        await _hub.Clients.Group($"user:{request.CustomerId}").SendAsync("requestStatusChanged", new
+        var statusPayload = new
         {
             requestId = request.Id,
             status = request.Status,
-            workerName = request.Worker?.User?.Name
-        }, ct);
+            category = request.Category,
+            description = request.Description,
+            workerId = request.WorkerId,
+            workerUserId = request.Worker?.UserId,
+            workerName = request.Worker?.User?.Name,
+            customerId = request.CustomerId,
+            customerName = request.Customer?.Name
+        };
+
+        await _hub.Clients.Group($"user:{request.CustomerId}").SendAsync("requestStatusChanged", statusPayload, ct);
+        if (request.Worker?.UserId is int workerUserId && workerUserId != userId.Value)
+        {
+            await _hub.Clients.Group($"user:{workerUserId}").SendAsync("requestStatusChanged", statusPayload, ct);
+        }
 
         return Ok(MapToDto(request));
     }

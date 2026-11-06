@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { requireAuth } from "../auth.js";
 import { toast, setLoading, showSkeleton, fieldError } from "../ui.js";
-import { avatarHtml, escapeHtml, statusBadge, bottomNav } from "../components.js";
+import { avatarHtml, escapeHtml, statusBadge, bottomNav, refreshPendingRequestsCount } from "../components.js";
 import { formatDate, formatRangeDate } from "../dates.js";
 import { connectHub, onHub, disconnectHub } from "../hub.js";
 
@@ -52,6 +52,7 @@ async function load({ silent = false } = {}) {
     requestsCache = data.items || [];
     renderRequests(requestsCache);
     await loadAppointments(seq, filter);
+    refreshPendingRequestsCount({ notifyNew: false });
   } catch (err) {
     if (seq !== loadSeq) return;
     if (silent) {
@@ -71,27 +72,28 @@ function renderRequests(items) {
     return;
   }
 
-  const isWorker = user.role === "Worker";
+  const isWorker = String(user.role ?? user.Role ?? "").toLowerCase() === "worker";
 
   listEl.innerHTML = items
     .map((r) => {
-      const party =
-        isWorker
-          ? r.customer?.name || "Cliente"
-          : r.worker?.name || "Sin asignar";
+      const customerId = r.customerId ?? r.customer?.id ?? r.CustomerId ?? r.Customer?.Id;
+      const party = isWorker
+        ? r.customer?.name || "Cliente"
+        : r.worker?.name || "Sin asignar";
       const partyUser = isWorker ? r.customer : r.worker;
       const showWorkerActions = isWorker && r.status === "Pendiente";
       const showComplete = isWorker && r.status === "Aceptada";
       const canSchedule =
-        (user.role === "Customer" || isWorker) &&
+        (!isWorker || isWorker) &&
         (r.status === "Aceptada" || r.status === "Pendiente");
 
-      // TAREA 3: Botón para que el trabajador chatee con el cliente
-      const chatClienteBtn = isWorker && r.customerId
-        ? `<button type="button" class="btn btn-sm btn-outline btn-chat-cliente" data-customer-id="${r.customerId}" data-request-id="${r.id}">
-             💬 Escribir al cliente
-           </button>`
-        : "";
+      // Botón para que el trabajador envíe mensajes al cliente antes y después de aceptar el empleo
+      const chatClienteBtn =
+        isWorker && customerId
+          ? `<button type="button" class="btn btn-outline btn-sm btn-chat-cliente" data-customer-id="${customerId}" data-request-id="${r.id}" data-customer-name="${escapeHtml(party)}">
+               💬 Enviar mensaje
+             </button>`
+          : "";
 
       return `
       <article class="request-card" data-id="${r.id}">
@@ -125,8 +127,8 @@ function renderRequests(items) {
               : ""
           }
           ${
-            user.role === "Customer" && r.worker?.userId
-              ? `<button type="button" class="btn btn-ghost btn-sm" data-chat="${r.worker.userId}" data-request="${r.id}">Chat</button>`
+            !isWorker && r.worker?.userId
+              ? `<button type="button" class="btn btn-ghost btn-sm" data-chat="${r.worker.userId}" data-request="${r.id}" data-peer-name="${escapeHtml(party)}">Chat</button>`
               : ""
           }
           ${chatClienteBtn}
@@ -143,17 +145,18 @@ function renderRequests(items) {
   });
   listEl.querySelectorAll("[data-chat]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      window.location.href = `chat.html?with=${btn.dataset.chat}&requestId=${btn.dataset.request || ""}`;
+      const peerName = btn.dataset.peerName || "";
+      window.location.href = `chat.html?with=${encodeURIComponent(btn.dataset.chat)}&requestId=${encodeURIComponent(btn.dataset.request || "")}&name=${encodeURIComponent(peerName)}`;
     });
   });
 
-  // TAREA 3: Evento para botón "Escribir al cliente" (trabajador -> cliente)
   listEl.querySelectorAll(".btn-chat-cliente").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const customerId = btn.dataset.customerId;
-      const requestId = btn.dataset.requestId;
-      window.location.href = `chat.html?with=${customerId}&request=${requestId}`;
+      const requestId = btn.dataset.requestId || "";
+      const customerName = btn.dataset.customerName || "";
+      window.location.href = `chat.html?with=${encodeURIComponent(customerId)}&requestId=${encodeURIComponent(requestId)}&name=${encodeURIComponent(customerName)}`;
     });
   });
 }
@@ -189,6 +192,15 @@ async function loadAppointments(seq = loadSeq, filter = statusFilter) {
     apptListEl.querySelectorAll("[data-appt-action]").forEach((btn) => {
       btn.addEventListener("click", () => updateAppointment(btn.dataset.apptId, btn.dataset.apptAction, btn));
     });
+    apptListEl.querySelectorAll(".btn-chat-cliente").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const peerId = btn.dataset.customerId;
+        const requestId = btn.dataset.requestId || "";
+        const peerName = btn.dataset.customerName || "";
+        window.location.href = `chat.html?with=${encodeURIComponent(peerId)}&requestId=${encodeURIComponent(requestId)}&name=${encodeURIComponent(peerName)}`;
+      });
+    });
   } catch {
     if (seq !== loadSeq) return;
     apptTitle.hidden = true;
@@ -197,8 +209,18 @@ async function loadAppointments(seq = loadSeq, filter = statusFilter) {
 }
 
 function appointmentCard(a) {
+  const isWorker = String(user.role ?? user.Role ?? "").toLowerCase() === "worker";
   const scheduledByMe = a.createdById != null && Number(a.createdById) === Number(user.id);
   const showActions = a.status === "Nueva" && !scheduledByMe;
+  const peerId = isWorker ? (a.customerId ?? a.customer?.id) : a.worker?.userId;
+  const peerName = isWorker ? (a.customer?.name || "Cliente") : (a.worker?.name || "Técnico");
+
+  const chatBtn = peerId
+    ? `<button type="button" class="btn btn-outline btn-sm btn-chat-cliente" data-customer-id="${peerId}" data-request-id="${a.requestId || ""}" data-customer-name="${escapeHtml(peerName)}">
+         💬 Enviar mensaje
+       </button>`
+    : "";
+
   return `
     <article class="appointment-card">
       <div class="appt-label">📅 Cita agendada ${statusBadge(a.status)}</div>
@@ -206,15 +228,19 @@ function appointmentCard(a) {
       <p class="when">${a.dateTime ? formatRangeDate(a.dateTime) : ""} · ${escapeHtml(a.request?.category || "")}</p>
       <p class="desc">${escapeHtml(a.description || "")}</p>
       ${
-        showActions
-          ? `<div class="actions">
-              <button type="button" class="btn btn-primary btn-sm" data-appt-action="Aceptada" data-appt-id="${a.id}">Aceptar</button>
-              <button type="button" class="btn btn-danger btn-sm" data-appt-action="Rechazada" data-appt-id="${a.id}">Rechazar</button>
-            </div>`
-          : a.status === "Nueva"
-            ? `<p class="desc">Esperando confirmación de la contraparte.</p>`
-            : ""
+        a.status === "Nueva" && scheduledByMe
+          ? `<p class="desc">Esperando confirmación de la contraparte.</p>`
+          : ""
       }
+      <div class="actions">
+        ${
+          showActions
+            ? `<button type="button" class="btn btn-primary btn-sm" data-appt-action="Aceptada" data-appt-id="${a.id}">Aceptar</button>
+               <button type="button" class="btn btn-danger btn-sm" data-appt-action="Rechazada" data-appt-id="${a.id}">Rechazar</button>`
+            : ""
+        }
+        ${chatBtn}
+      </div>
     </article>`;
 }
 
@@ -224,6 +250,7 @@ async function updateAppointment(id, status, btn) {
     await api(`/api/appointments/${id}/status`, { method: "PATCH", body: { status } });
     toast(`Cita ${status.toLowerCase()}`, "success");
     await loadAppointments();
+    refreshPendingRequestsCount({ notifyNew: false });
   } catch (err) {
     toast(err.message, "error");
   } finally {

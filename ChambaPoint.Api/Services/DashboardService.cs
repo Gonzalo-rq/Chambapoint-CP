@@ -30,6 +30,7 @@ public class DashboardService : IDashboardService
             return (null, 403, "El usuario autenticado no cuenta con perfil de trabajador.");
         }
 
+        var resolvedCategory = WorkerService.ResolveCategoryFromTerm(worker.Profession) ?? worker.Profession;
         var culture = new CultureInfo("es-PE");
         var now = DateTime.UtcNow;
         var today = now.Date;
@@ -56,7 +57,6 @@ public class DashboardService : IDashboardService
         for (int i = 0; i < 7; i++)
         {
             var currentDayDate = startOfWeek.AddDays(i);
-            var nextDayDate = currentDayDate.AddDays(1);
 
             var dayJobs = completedRequestsThisWeek.Where(r =>
             {
@@ -78,7 +78,8 @@ public class DashboardService : IDashboardService
 
         // 3. Contadores
         var pendingRequestsCount = await _db.Requests
-            .CountAsync(r => (r.WorkerId == worker.Id || (r.WorkerId == null && r.Category == worker.Profession)) &&
+            .CountAsync(r => (r.WorkerId == worker.Id ||
+                              (r.WorkerId == null && (r.Category == worker.Profession || r.Category == resolvedCategory))) &&
                              r.Status == RequestStatuses.Pendiente, ct);
 
         var confirmedRequestsCount = await _db.Requests
@@ -93,7 +94,7 @@ public class DashboardService : IDashboardService
         var confirmedAppointmentsCount = await _db.Appointments
             .CountAsync(a => a.WorkerId == worker.Id && a.Status == AppointmentStatuses.Aceptada, ct);
 
-        // 4. Citas pendientes con botones Aceptar/Rechazar
+        // 4. Citas pendientes con botones Aceptar/Rechazar y datos del cliente
         var pendingAppointments = await _db.Appointments
             .Include(a => a.Customer)
             .Include(a => a.Request)
@@ -106,6 +107,7 @@ public class DashboardService : IDashboardService
         {
             a.Id,
             a.RequestId,
+            customerId = a.CustomerId,
             title = !string.IsNullOrWhiteSpace(a.Request?.Description) ? a.Request.Description : a.Description,
             category = a.Request?.Category ?? worker.Profession,
             customerName = a.Customer?.Name,
@@ -133,12 +135,14 @@ public class DashboardService : IDashboardService
             }
         });
 
-        // 5. Actividad reciente
+        // 5. Actividad reciente (incluye solicitudes asignadas y abiertas de su categoría)
         var recentRequests = await _db.Requests
             .Include(r => r.Customer)
-            .Where(r => r.WorkerId == worker.Id)
+            .Where(r => r.WorkerId == worker.Id ||
+                        (r.WorkerId == null && (r.Category == worker.Profession || r.Category == resolvedCategory) &&
+                         r.Status == RequestStatuses.Pendiente))
             .OrderByDescending(r => r.CompletedAt ?? r.CreatedAt)
-            .Take(5)
+            .Take(8)
             .ToListAsync(ct);
 
         var recentActivityDto = recentRequests.Select(r =>
@@ -156,6 +160,11 @@ public class DashboardService : IDashboardService
                 id = r.Id,
                 type = "request",
                 title = r.Description,
+                category = r.Category,
+                urgency = r.Urgency,
+                customerId = r.CustomerId,
+                customerName = r.Customer?.Name,
+                customerAvatar = r.Customer?.AvatarUrl,
                 subtitle = $"{timeAgo} • {r.Category}",
                 amount = price,
                 amountFormatted = "S/ " + price.ToString("N2", culture),

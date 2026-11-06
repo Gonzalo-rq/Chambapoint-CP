@@ -25,6 +25,7 @@ public interface IRequestService
     Task<(Request? Request, int StatusCode, string? Error)> UpdateStatusAsync(
         int requestId, int currentUserId, string role, string newStatus, CancellationToken ct = default);
     Task<Worker?> GetWorkerByUserIdAsync(int userId, CancellationToken ct = default);
+    Task<List<int>> GetWorkerUserIdsByCategoryAsync(string category, CancellationToken ct = default);
 }
 
 public class RequestService : IRequestService
@@ -105,7 +106,9 @@ public class RequestService : IRequestService
             }
 
             // Para trabajadores: solicitudes asignadas directamente o abiertas de su oficio
-            query = query.Where(r => r.WorkerId == worker.Id || (r.WorkerId == null && r.Category == worker.Profession));
+            var resolvedCategory = WorkerService.ResolveCategoryFromTerm(worker.Profession) ?? worker.Profession;
+            query = query.Where(r => r.WorkerId == worker.Id ||
+                (r.WorkerId == null && (r.Category == worker.Profession || r.Category == resolvedCategory)));
         }
         else
         {
@@ -302,5 +305,25 @@ public class RequestService : IRequestService
         return _db.Workers
             .Include(w => w.User)
             .FirstOrDefaultAsync(w => w.UserId == userId, ct);
+    }
+
+    public async Task<List<int>> GetWorkerUserIdsByCategoryAsync(string category, CancellationToken ct = default)
+    {
+        var normalizedCat = WorkerService.ResolveCategoryFromTerm(category) ?? category;
+        var workers = await _db.Workers
+            .AsNoTracking()
+            .Select(w => new { w.UserId, w.Profession })
+            .ToListAsync(ct);
+
+        return workers
+            .Where(w =>
+            {
+                var wCat = WorkerService.ResolveCategoryFromTerm(w.Profession) ?? w.Profession;
+                return string.Equals(wCat, normalizedCat, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(w.Profession, category, StringComparison.OrdinalIgnoreCase);
+            })
+            .Select(w => w.UserId)
+            .Distinct()
+            .ToList();
     }
 }

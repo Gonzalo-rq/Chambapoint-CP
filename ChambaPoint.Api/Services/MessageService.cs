@@ -16,6 +16,7 @@ public interface IMessageService
     Task<(List<Message> Items, int Total, int MarkedAsReadCount)> GetHistoryAsync(int currentUserId, int withUserId, int page, int pageSize, CancellationToken ct = default);
     Task<List<object>> GetConversationsAsync(int currentUserId, CancellationToken ct = default);
     Task<int> MarkAsReadAsync(int currentUserId, int withUserId, CancellationToken ct = default);
+    Task<object?> GetPeerInfoAsync(int peerUserId, CancellationToken ct = default);
 }
 
 public class MessageService : IMessageService
@@ -64,7 +65,7 @@ public class MessageService : IMessageService
             var isCustomer = request.CustomerId == senderId;
             var isAssignedWorker = request.WorkerId.HasValue && request.Worker?.UserId == senderId;
 
-            // PERMITIR: Si la solicitud está abierta (WorkerId == null) y quien envía es un trabajador
+            // PERMITIR: Si la solicitud está abierta (WorkerId == null) o quien envía es un trabajador
             var senderIsWorker = await _db.Workers.AnyAsync(w => w.UserId == senderId, ct);
 
             if (!isCustomer && !isAssignedWorker && !senderIsWorker)
@@ -122,6 +123,25 @@ public class MessageService : IMessageService
             .ToListAsync(ct);
 
         return (items, total, markedCount);
+    }
+
+    public async Task<object?> GetPeerInfoAsync(int peerUserId, CancellationToken ct = default)
+    {
+        var peer = await _db.Users
+            .AsNoTracking()
+            .Include(u => u.WorkerProfile)
+            .FirstOrDefaultAsync(u => u.Id == peerUserId, ct);
+
+        if (peer == null) return null;
+
+        return new
+        {
+            id = peer.Id,
+            name = peer.Name,
+            avatarUrl = peer.AvatarUrl,
+            role = peer.Role,
+            profession = peer.WorkerProfile?.Profession ?? (peer.Role == Roles.Customer ? "Cliente" : "Trabajador")
+        };
     }
 
     public async Task<int> MarkAsReadAsync(int currentUserId, int withUserId, CancellationToken ct = default)

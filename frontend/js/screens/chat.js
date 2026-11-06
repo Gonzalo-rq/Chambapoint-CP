@@ -26,7 +26,8 @@ const input = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
 
 let peer = null;
-let requestId = Number(params.get("requestId")) || null;
+let requestId = Number(params.get("requestId") || params.get("request")) || null;
+const initialName = params.get("name") || "";
 let page = 1;
 const pageSize = 50;
 let loadingMore = false;
@@ -47,12 +48,12 @@ async function loadPeerAndHistory({ silent = false } = {}) {
     }
 
     const first = (probe.items || [])[0] || (data.items || [])[0];
-    peer = first?.senderId === withUserId ? first.sender : first?.receiver;
+    peer = probe.peer || data.peer || (first?.senderId === withUserId ? first.sender : first?.receiver);
     if (peer?.id === user.id || peer?.Id === user.id) {
       peer = first?.senderId === withUserId ? first.receiver : first.sender;
     }
     if (!peer) {
-      peer = { id: withUserId, name: `Usuario #${withUserId}` };
+      peer = { id: withUserId, name: initialName || `Usuario #${withUserId}` };
     }
     renderHeader(peer);
     renderMessages(data.items || []);
@@ -69,7 +70,7 @@ async function loadPeerAndHistory({ silent = false } = {}) {
 }
 
 function renderHeader(p) {
-  headerName.textContent = p.name || `Usuario #${withUserId}`;
+  headerName.textContent = p.name || initialName || `Usuario #${withUserId}`;
   headerSub.textContent = p.profession || "Chat en vivo";
   const temp = document.createElement("div");
   temp.innerHTML = avatarHtml(p, "avatar-sm");

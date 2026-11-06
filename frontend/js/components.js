@@ -64,6 +64,20 @@ export function updateUnreadBadge(count) {
   });
 }
 
+export function updateRequestsBadge(count) {
+  const num = Number(count) || 0;
+  const badges = document.querySelectorAll(".requests-badge");
+  badges.forEach((el) => {
+    if (num > 0) {
+      el.textContent = num > 99 ? "99+" : String(num);
+      el.style.display = "inline-flex";
+    } else {
+      el.textContent = "0";
+      el.style.display = "none";
+    }
+  });
+}
+
 export async function refreshUnreadCount() {
   const token = getToken();
   if (!token) return 0;
@@ -73,6 +87,84 @@ export async function refreshUnreadCount() {
     const total = convs.reduce((acc, c) => acc + (Number(c.unreadCount) || 0), 0);
     updateUnreadBadge(total);
     return total;
+  } catch {
+    return 0;
+  }
+}
+
+function getNotifiedReqIds(userId) {
+  if (!userId) return new Set();
+  try {
+    const raw = localStorage.getItem(`chambapoint_notified_reqs_${userId}`);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr.map(Number) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function markRequestNotified(userId, reqId) {
+  if (!userId || !reqId) return;
+  try {
+    const set = getNotifiedReqIds(userId);
+    set.add(Number(reqId));
+    const arr = Array.from(set).slice(-100);
+    localStorage.setItem(`chambapoint_notified_reqs_${userId}`, JSON.stringify(arr));
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+export async function refreshPendingRequestsCount({ notifyNew = true } = {}) {
+  const token = getToken();
+  const user = getUser();
+  if (!token || !user) return 0;
+
+  const userId = Number(user.id ?? user.userId ?? user.Id) || 0;
+  const isWorker = String(user.role ?? user.Role ?? "").toLowerCase() === "worker";
+
+  try {
+    if (isWorker) {
+      const [reqData, apptData] = await Promise.all([
+        api("/api/requests?status=Pendiente&pageSize=50").catch(() => ({ items: [] })),
+        api("/api/appointments?status=Nueva&pageSize=50").catch(() => ({ items: [] })),
+      ]);
+
+      const pendingReqs = Array.isArray(reqData?.items) ? reqData.items : [];
+      const pendingAppts = (Array.isArray(apptData?.items) ? apptData.items : []).filter(
+        (a) => a.createdById == null || Number(a.createdById) !== userId
+      );
+
+      const total = pendingReqs.length + pendingAppts.length;
+      updateRequestsBadge(total);
+
+      if (notifyNew && pendingReqs.length > 0 && userId) {
+        const seen = getNotifiedReqIds(userId);
+        const unseen = pendingReqs.filter((r) => r?.id && !seen.has(Number(r.id)));
+        if (unseen.length > 0) {
+          const newest = unseen[0];
+          unseen.forEach((r) => markRequestNotified(userId, r.id));
+          showRequestPopup({
+            requestId: newest.id,
+            customerId: newest.customerId ?? newest.customer?.id,
+            customerName: newest.customer?.name || "Nuevo cliente",
+            customerAvatar: newest.customer?.avatarUrl,
+            category: newest.category,
+            description: newest.description,
+            urgency: newest.urgency,
+          });
+        }
+      }
+
+      return total;
+    } else {
+      const apptData = await api("/api/appointments?status=Nueva&pageSize=50").catch(() => ({ items: [] }));
+      const pendingAppts = (Array.isArray(apptData?.items) ? apptData.items : []).filter(
+        (a) => a.createdById != null && Number(a.createdById) !== userId
+      );
+      updateRequestsBadge(pendingAppts.length);
+      return pendingAppts.length;
+    }
   } catch {
     return 0;
   }
@@ -140,6 +232,66 @@ export function showMessagePopup(payload = {}) {
   setTimeout(dismiss, 5000);
 }
 
+export function showRequestPopup(payload = {}) {
+  const customerName = payload.customerName || payload.creatorName || "Nueva solicitud";
+  const avatarUrl = payload.customerAvatar || payload.avatarUrl;
+  const tag = payload.tag || "Solicitud";
+  const categoryPart = payload.category ? `${payload.category}: ` : "";
+  const detailPart = payload.description || payload.urgency || "Tienes una nueva solicitud de trabajo";
+  const text = payload.text || `${categoryPart}${detailPart}`;
+
+  let container = document.getElementById("messagePopupContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "messagePopupContainer";
+    container.className = "message-popup-container";
+    document.body.appendChild(container);
+  }
+
+  const popup = document.createElement("div");
+  popup.className = "message-popup";
+  popup.setAttribute("role", "alert");
+  popup.setAttribute("aria-live", "assertive");
+
+  const avatarContent = avatarUrl
+    ? `<img src="${escapeAttr(avatarUrl)}" alt="" />`
+    : `<span>${escapeHtml(initials(customerName))}</span>`;
+
+  popup.innerHTML = `
+    <div class="message-popup-inner">
+      <div class="message-popup-avatar">${avatarContent}</div>
+      <div class="message-popup-body">
+        <div class="message-popup-header">
+          <span class="message-popup-title">${escapeHtml(customerName)}</span>
+          <span class="message-popup-tag">${escapeHtml(tag)}</span>
+        </div>
+        <div class="message-popup-text">${escapeHtml(text)}</div>
+      </div>
+      <button type="button" class="message-popup-close" aria-label="Cerrar">&times;</button>
+    </div>
+  `;
+
+  const closeBtn = popup.querySelector(".message-popup-close");
+  const dismiss = () => {
+    popup.classList.remove("message-popup-show");
+    setTimeout(() => popup.remove(), 200);
+  };
+
+  closeBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dismiss();
+  });
+
+  popup.addEventListener("click", () => {
+    dismiss();
+    window.location.href = "requests.html";
+  });
+
+  container.appendChild(popup);
+  requestAnimationFrame(() => popup.classList.add("message-popup-show"));
+  setTimeout(dismiss, 6000);
+}
+
 let navNotificationsInitialized = false;
 
 export function initNavNotifications() {
@@ -147,7 +299,10 @@ export function initNavNotifications() {
   const user = getUser();
   if (!token || !user) return;
 
+  const userId = Number(user.id ?? user.userId ?? user.Id) || 0;
+
   refreshUnreadCount();
+  refreshPendingRequestsCount({ notifyNew: true });
 
   if (navNotificationsInitialized) return;
   navNotificationsInitialized = true;
@@ -163,9 +318,50 @@ export function initNavNotifications() {
     refreshUnreadCount();
   });
 
+  onHub("newRequest", (payload) => {
+    if (payload?.requestId && userId) {
+      markRequestNotified(userId, payload.requestId);
+    }
+    showRequestPopup(payload);
+    refreshPendingRequestsCount({ notifyNew: false });
+  });
+
+  onHub("newAppointment", (payload) => {
+    showRequestPopup({
+      customerName: payload?.creatorName || "Cita agendada",
+      tag: "Nueva cita",
+      text: payload?.description || "Tienes una nueva cita pendiente de confirmar.",
+    });
+    refreshPendingRequestsCount({ notifyNew: false });
+  });
+
+  onHub("requestStatusChanged", (payload) => {
+    refreshPendingRequestsCount({ notifyNew: false });
+    const isCustomer = String(user.role ?? user.Role ?? "").toLowerCase() === "customer";
+    if (isCustomer && payload?.status) {
+      showRequestPopup({
+        customerName: payload.workerName || "Técnico",
+        tag: "Solicitud",
+        text: `Tu solicitud cambió a estado: ${payload.status}`,
+      });
+    }
+  });
+
+  onHub("appointmentStatusChanged", (payload) => {
+    refreshPendingRequestsCount({ notifyNew: false });
+    if (payload?.status) {
+      showRequestPopup({
+        customerName: payload.changedBy || "Actualización de cita",
+        tag: "Cita",
+        text: `La cita cambió a estado: ${payload.status}`,
+      });
+    }
+  });
+
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       refreshUnreadCount();
+      refreshPendingRequestsCount({ notifyNew: true });
     }
   });
 }
@@ -202,9 +398,18 @@ export function bottomNav(active = "explore", role = null) {
   setTimeout(() => initNavNotifications(), 0);
   setTimeout(() => mountSharedWidgets(), 0);
 
-  const badgeIcon = '<span class="nav-messages-badge messages-badge" id="messagesNavBadge" ' +
+  const msgBadgeIcon =
+    '<span class="nav-messages-badge messages-badge" id="messagesNavBadge" ' +
     'style="display:none;" aria-label="Mensajes no leídos">0</span>';
-  const badgeLabel = '<span class="nav-label-badge messages-badge" id="messagesBadge" ' +
+  const msgBadgeLabel =
+    '<span class="nav-label-badge messages-badge" id="messagesBadge" ' +
+    'style="display:none;">0</span>';
+
+  const reqBadgeIcon =
+    '<span class="nav-messages-badge requests-badge" id="requestsNavBadge" ' +
+    'style="display:none;" aria-label="Solicitudes pendientes">0</span>';
+  const reqBadgeLabel =
+    '<span class="nav-label-badge requests-badge" id="requestsBadge" ' +
     'style="display:none;">0</span>';
 
   return `<nav class="bottom-nav" aria-label="Navegación principal">
@@ -213,9 +418,9 @@ export function bottomNav(active = "explore", role = null) {
         (it) => `<a href="${it.href}" class="${active === it.id ? "active" : ""}" data-nav="${it.id}">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${it.path}"/></svg>
-        ${it.id === "messages" ? badgeIcon : ""}
+        ${it.id === "messages" ? msgBadgeIcon : it.id === "requests" ? reqBadgeIcon : ""}
       </span>
-      <span>${it.label}${it.id === "messages" ? badgeLabel : ""}</span>
+      <span>${it.label}${it.id === "messages" ? msgBadgeLabel : it.id === "requests" ? reqBadgeLabel : ""}</span>
     </a>`
       )
       .join("")}
