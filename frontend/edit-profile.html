@@ -77,8 +77,28 @@
           <span class="field-hint">Opcional · una por línea</span>
         </div>
 
+        <!-- TAREA 5: Toggle disponibilidad y GPS -->
+        <label class="form-check" style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <input type="checkbox" id="chkIsOnline" checked />
+          <span><strong>Disponible ahora (Mostrarme En Línea en el mapa)</strong></span>
+        </label>
+        <button type="button" id="btnCaptureGps" class="btn btn-sm btn-outline" style="margin-bottom:16px;">
+          📍 Usar mi ubicación GPS actual
+        </button>
+
         <div class="edit-actions">
           <button type="submit" class="btn btn-primary btn-block" id="saveBtn">Guardar cambios</button>
+        </div>
+
+        <!-- TAREA 4: Zona de Peligro - Eliminar cuenta -->
+        <div class="danger-zone" style="margin-top: 40px; padding: 20px; border: 1px solid #ffcdd2; border-radius: 12px; background: #ffebee;">
+          <h3 style="color: #c62828; font-size: 16px; margin-bottom: 8px;">Zona de Peligro</h3>
+          <p style="color: #555; font-size: 13px; margin-bottom: 16px;">
+            Si eliminas tu cuenta, se borrarán todos tus datos personales, solicitudes y perfiles asociados. Esta acción no se puede deshacer.
+          </p>
+          <button type="button" id="btnDeleteAccount" class="btn btn-danger" style="background: #d32f2f; color: white;">
+            🗑️ Eliminar mi cuenta
+          </button>
         </div>
       </form>
     </main>

@@ -3,6 +3,19 @@ import { requireAuth } from "../auth.js";
 import { showSkeleton, toast } from "../ui.js";
 import { avatarHtml, escapeHtml, bottomNav } from "../components.js";
 
+// -- TAREA 2: Función de distancia real (Haversine) --
+function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return Math.round((R * c) * 10) / 10; // 1 decimal
+}
+
 const user = requireAuth();
 if (!user) throw new Error("Sin sesión");
 
@@ -26,6 +39,7 @@ let map = null;
 let markersLayer = null;
 let meMarker = null;
 let currentWorkers = [];
+let userCoords = null; // Coordenadas GPS del cliente (si activa localización)
 
 document.body.insertAdjacentHTML("beforeend", bottomNav("explore", user.role));
 
@@ -117,6 +131,8 @@ function locateMe() {
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const { latitude, longitude } = pos.coords;
+      // TAREA 2: guardar coords del cliente para cálculo de distancia real
+      userCoords = { lat: latitude, lng: longitude };
       if (meMarker) meMarker.remove();
       meMarker = L.circleMarker([latitude, longitude], {
         radius: 9,
@@ -129,6 +145,8 @@ function locateMe() {
         .addTo(map);
       map.setView([latitude, longitude], 14);
       meMarker.openPopup();
+      // Re-renderizar lista con distancias reales
+      renderWorkers(currentWorkers);
     },
     () => {
       toast("No pudimos obtener tu ubicación.", "error");
@@ -233,6 +251,20 @@ function renderWorkers(workers) {
       if (w.experienceYears) tags.push(`${w.experienceYears} años`);
       if (w.distanceKm != null) tags.push(`${w.distanceKm} km`);
       if (w.jobsCount) tags.push(`${w.jobsCount} trabajos`);
+
+      // TAREA 2: Calcular distancia real vs radio de cobertura
+      const distReal = userCoords && w.latitude && w.longitude
+        ? calcularDistanciaKm(userCoords.lat, userCoords.lng, w.latitude, w.longitude)
+        : null;
+      const radioCobertura = w.distanceKm || 10;
+      const dentroDeZona = distReal !== null && distReal <= radioCobertura;
+      const distanciaTexto = distReal !== null
+        ? `📍 A ${distReal} km de ti`
+        : `🚗 Cobertura: hasta ${radioCobertura} km`;
+      const badgeZona = dentroDeZona
+        ? `<span class="badge" style="background:#e8f5e9;color:#2e7d32;font-size:11px;">En tu zona</span>`
+        : "";
+
       return `
       <article class="worker-card" data-id="${w.id}" tabindex="0" role="link" aria-label="Ver perfil de ${escapeHtml(w.name)}">
         ${avatarHtml(w, "")}
@@ -241,7 +273,7 @@ function renderWorkers(workers) {
             <span class="name">${escapeHtml(w.name)}</span>
             <span class="rating">★ ${rating ? rating.toFixed(1) : " Nuevo"}</span>
           </div>
-          <div class="profession">${escapeHtml(w.profession)} • ${w.distanceKm ?? "—"} km (dist.)</div>
+          <div class="profession">${escapeHtml(w.profession)} · ${distanciaTexto} ${badgeZona}</div>
           <div class="tags">${tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join("")}</div>
         </div>
       </article>`;

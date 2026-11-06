@@ -71,18 +71,27 @@ function renderRequests(items) {
     return;
   }
 
+  const isWorker = user.role === "Worker";
+
   listEl.innerHTML = items
     .map((r) => {
       const party =
-        user.role === "Worker"
+        isWorker
           ? r.customer?.name || "Cliente"
           : r.worker?.name || "Sin asignar";
-      const partyUser = user.role === "Worker" ? r.customer : r.worker;
-      const showWorkerActions = user.role === "Worker" && r.status === "Pendiente";
-      const showComplete = user.role === "Worker" && r.status === "Aceptada";
+      const partyUser = isWorker ? r.customer : r.worker;
+      const showWorkerActions = isWorker && r.status === "Pendiente";
+      const showComplete = isWorker && r.status === "Aceptada";
       const canSchedule =
-        (user.role === "Customer" || user.role === "Worker") &&
+        (user.role === "Customer" || isWorker) &&
         (r.status === "Aceptada" || r.status === "Pendiente");
+
+      // TAREA 3: Botón para que el trabajador chatee con el cliente
+      const chatClienteBtn = isWorker && r.customerId
+        ? `<button type="button" class="btn btn-sm btn-outline btn-chat-cliente" data-customer-id="${r.customerId}" data-request-id="${r.id}">
+             💬 Escribir al cliente
+           </button>`
+        : "";
 
       return `
       <article class="request-card" data-id="${r.id}">
@@ -96,7 +105,7 @@ function renderRequests(items) {
         </div>
         <div class="req-party">
           ${avatarHtml(partyUser || { name: party })}
-          <span>${user.role === "Worker" ? "Cliente: " : "Técnico: "}<strong>${escapeHtml(party)}</strong></span>
+          <span>${isWorker ? "Cliente: " : "Técnico: "}<strong>${escapeHtml(party)}</strong></span>
         </div>
         <div class="actions">
           ${
@@ -120,6 +129,7 @@ function renderRequests(items) {
               ? `<button type="button" class="btn btn-ghost btn-sm" data-chat="${r.worker.userId}" data-request="${r.id}">Chat</button>`
               : ""
           }
+          ${chatClienteBtn}
         </div>
       </article>`;
     })
@@ -134,6 +144,16 @@ function renderRequests(items) {
   listEl.querySelectorAll("[data-chat]").forEach((btn) => {
     btn.addEventListener("click", () => {
       window.location.href = `chat.html?with=${btn.dataset.chat}&requestId=${btn.dataset.request || ""}`;
+    });
+  });
+
+  // TAREA 3: Evento para botón "Escribir al cliente" (trabajador -> cliente)
+  listEl.querySelectorAll(".btn-chat-cliente").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const customerId = btn.dataset.customerId;
+      const requestId = btn.dataset.requestId;
+      window.location.href = `chat.html?with=${customerId}&request=${requestId}`;
     });
   });
 }
